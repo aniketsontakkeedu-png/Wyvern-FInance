@@ -11,16 +11,6 @@ from .ml_models import categorizer, anomaly_detector, forecaster
 
 PROFILE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "user_profile.json")
 
-DEFAULT_CATEGORIES = [
-    "Food & Dining",
-    "Bills & Utilities",
-    "Transportation",
-    "Subscriptions & Digital",
-    "Shopping & Retail",
-    "Health & Fitness",
-    "Entertainment & Leisure"
-]
-
 class DataStore:
     def __init__(self):
         self.profile_configured = False
@@ -30,10 +20,10 @@ class DataStore:
         self.monthly_history: List[Dict[str, Any]] = []
         self.plaid_status = {
             "connected": True,
-            "institution_name": "HDFC Bank / RBI Account Aggregator",
-            "item_id": "item_in_hdfc_8921",
+            "institution_name": "Account Aggregator / Bank API",
+            "item_id": "item_in_active_01",
             "last_synced": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "sync_mode": "Fintech API Sandbox (INR)",
+            "sync_mode": "Fintech API (INR)",
             "environment": "sandbox"
         }
         self._load_or_init()
@@ -43,47 +33,49 @@ class DataStore:
             try:
                 with open(PROFILE_FILE, "r", encoding="utf-8") as f:
                     saved = json.load(f)
-                    self.setup_user_profile(saved, persist=False)
-                    return
+                    if saved and saved.get("monthly_salary", 0) > 0:
+                        self.setup_user_profile(saved, persist=False)
+                        return
             except Exception as e:
                 print(f"Error loading saved profile: {e}")
 
         # Fresh unconfigured state - requires user input via onboarding questionnaire
         self.profile_configured = False
+        self.profile_data = {}
         self.accounts = [
             {
                 "id": "acc_sav_01",
-                "name": "Primary Savings Account",
-                "institution": "HDFC Bank",
+                "name": "Bank Savings & Cash",
+                "institution": "Primary Bank",
                 "type": "depository",
                 "subtype": "savings",
                 "balance": 0.0,
                 "currency": "INR",
-                "mask": "8921",
-                "status": "pending_setup"
+                "mask": "----",
+                "status": "awaiting_calibration"
             },
             {
                 "id": "acc_inv_02",
-                "name": "Direct Mutual Fund Portfolio",
-                "institution": "Zerodha / Groww",
+                "name": "Investments & Mutual Funds",
+                "institution": "Brokerage / Demat",
                 "type": "investment",
                 "subtype": "brokerage",
                 "balance": 0.0,
                 "currency": "INR",
-                "mask": "4412",
-                "status": "pending_setup"
+                "mask": "----",
+                "status": "awaiting_calibration"
             },
             {
                 "id": "acc_cc_03",
-                "name": "RuPay / Visa Platinum Card",
-                "institution": "ICICI Bank",
+                "name": "Credit Card / Liabilities",
+                "institution": "Card Issuer",
                 "type": "credit",
                 "subtype": "credit card",
                 "balance": 0.0,
-                "limit": 150000.0,
+                "limit": 0.0,
                 "currency": "INR",
-                "mask": "7810",
-                "status": "pending_setup"
+                "mask": "----",
+                "status": "awaiting_calibration"
             }
         ]
         self.transactions = []
@@ -105,12 +97,12 @@ class DataStore:
         cat_spend = profile.get("category_spending", {})
         total_expense = sum(float(v) for v in cat_spend.values())
 
-        # Update accounts
+        # Update accounts with user's real numbers
         self.accounts = [
             {
                 "id": "acc_sav_01",
-                "name": "Primary Savings Account",
-                "institution": profile.get("primary_bank", "HDFC Bank Ltd"),
+                "name": "Primary Bank Savings & Liquid Cash",
+                "institution": profile.get("primary_bank", "HDFC / SBI / ICICI Bank"),
                 "type": "depository",
                 "subtype": "savings",
                 "balance": round(savings_bal, 2),
@@ -120,7 +112,7 @@ class DataStore:
             },
             {
                 "id": "acc_inv_02",
-                "name": "Equity & Mutual Fund Vault",
+                "name": "Equity, Stocks & Mutual Funds Portfolio",
                 "institution": profile.get("broker_name", "Zerodha / Groww"),
                 "type": "investment",
                 "subtype": "brokerage",
@@ -131,12 +123,12 @@ class DataStore:
             },
             {
                 "id": "acc_cc_03",
-                "name": "Credit Card Account",
-                "institution": "ICICI / HDFC Bank",
+                "name": "Credit Card & Outstanding Liabilities",
+                "institution": "Card Issuer / Bank",
                 "type": "credit",
                 "subtype": "credit card",
                 "balance": round(-abs(debt_bal), 2),
-                "limit": max(150000.0, debt_bal * 2.5),
+                "limit": max(100000.0, debt_bal * 2.0),
                 "currency": "INR",
                 "mask": "7810",
                 "status": "active"
@@ -154,7 +146,7 @@ class DataStore:
                 "account_id": "acc_sav_01",
                 "amount": round(total_income, 2),
                 "date": (now - timedelta(days=2)).isoformat(),
-                "merchant": "Monthly Payroll Salary Inflow",
+                "merchant": "Monthly Take-Home Salary & Inflow",
                 "category": "Income & Deposits",
                 "pending": False,
                 "channel": "online",
@@ -168,22 +160,22 @@ class DataStore:
                 "account_id": "acc_sav_01",
                 "amount": round(target_sip, 2),
                 "date": (now - timedelta(days=3)).isoformat(),
-                "merchant": "Monthly Direct Mutual Fund SIP Auto-Debit",
+                "merchant": "Monthly Systematic Investment Plan (SIP)",
                 "category": "Investments & Savings",
                 "pending": False,
                 "channel": "online",
                 "currency": "INR"
             })
 
-        # 3. Category spending distribution
+        # 3. Category spending distribution matching user's exact input
         merchant_map = {
-            "Food & Dining": [("Swiggy / Zomato Food Orders", 0.4), ("Blinkit / Instamart Groceries", 0.6)],
-            "Bills & Utilities": [("Electricity & Broadband Bill Payment", 0.5), ("House Rent & Maintenance", 0.5)],
-            "Transportation": [("Fuel & Metro / Ola Cabs Transit", 1.0)],
-            "Subscriptions & Digital": [("Streaming Services (Netflix/Spotify/Prime)", 1.0)],
-            "Shopping & Retail": [("Amazon / Myntra Retail Purchases", 1.0)],
-            "Health & Fitness": [("Pharmacy & Gym / Fitness Membership", 1.0)],
-            "Entertainment & Leisure": [("Weekend Movie / Dining Outings", 1.0)]
+            "Food & Dining": [("Swiggy / Zomato Online Orders", 0.45), ("Supermarket & Grocery Delivery", 0.55)],
+            "Bills & Utilities": [("Electricity & Broadband Bill Payment", 0.3), ("House Rent & Maintenance", 0.7)],
+            "Transportation": [("Fuel & Metro / Ride Commute", 1.0)],
+            "Subscriptions & Digital": [("OTT Streaming & Digital Subscriptions", 1.0)],
+            "Shopping & Retail": [("E-Commerce & Retail Shopping", 1.0)],
+            "Health & Fitness": [("Pharmacy & Gym / Fitness Dues", 1.0)],
+            "Entertainment & Leisure": [("Weekend Movies & Dining Outings", 1.0)]
         }
 
         counter = 10
@@ -191,7 +183,7 @@ class DataStore:
             amt = float(amt)
             if amt <= 0:
                 continue
-            splits = merchant_map.get(cat, [(f"{cat} Expenses", 1.0)])
+            splits = merchant_map.get(cat, [(f"{cat} Spend", 1.0)])
             for m_name, fraction in splits:
                 counter += 1
                 sub_amt = round(amt * fraction, 2)
@@ -199,7 +191,7 @@ class DataStore:
                     "id": f"tx_user_{now.strftime('%Y%m%d')}_{counter}",
                     "account_id": "acc_cc_03" if cat in ["Food & Dining", "Shopping & Retail", "Subscriptions & Digital"] else "acc_sav_01",
                     "amount": sub_amt,
-                    "date": (now - timedelta(days=(counter % 15) + 1)).isoformat(),
+                    "date": (now - timedelta(days=(counter % 18) + 1)).isoformat(),
                     "merchant": m_name,
                     "category": cat,
                     "pending": False,
@@ -209,13 +201,12 @@ class DataStore:
 
         self.transactions = tx_list
 
-        # Historical monthly trend for forecasting based on the user's real numbers
+        # Historical monthly trend for forecasting based on user's real numbers
         monthly_net = total_income - total_expense - target_sip
         self.monthly_history = []
         for i in range(5, -1, -1):
             m_date = now - timedelta(days=30 * i)
-            # Add slight realistic past variance around user baseline
-            var_pct = 1.0 + ((-1)**i * 0.04)
+            var_pct = 1.0 + ((-1)**i * 0.03)
             hist_inc = round(total_income * var_pct, 2)
             hist_sp = round((total_expense + target_sip) * var_pct, 2)
             self.monthly_history.append({
@@ -228,12 +219,12 @@ class DataStore:
         self.profile_data = profile
         self.profile_configured = True
 
-        # Fit ML models to user data
         if len(self.transactions) >= 5:
             anomaly_detector.fit(self.transactions)
 
         if persist:
             try:
+                os.makedirs(os.path.dirname(PROFILE_FILE), exist_ok=True)
                 with open(PROFILE_FILE, "w", encoding="utf-8") as f:
                     json.dump(profile, f, indent=2)
             except Exception as e:
@@ -254,6 +245,8 @@ class DataStore:
         return self.accounts
 
     def get_transactions(self, limit: int = 50) -> List[Dict[str, Any]]:
+        if not self.profile_configured or not self.transactions:
+            return []
         augmented = anomaly_detector.detect_all(self.transactions)
         augmented.sort(key=lambda x: x.get("date", ""), reverse=True)
         return augmented[:limit]
@@ -301,6 +294,33 @@ class DataStore:
         return self.monthly_history
 
     def get_summary_stats(self) -> Dict[str, Any]:
+        if not self.profile_configured:
+            return {
+                "profile_configured": False,
+                "profile_data": {},
+                "currency": "INR",
+                "currency_symbol": "₹",
+                "net_worth": 0.0,
+                "total_assets": 0.0,
+                "total_liabilities": 0.0,
+                "current_period_spending": 0.0,
+                "anomaly_count": 0,
+                "anomalies": [],
+                "forecast": {
+                    "current_monthly_avg_savings": 0.0,
+                    "current_monthly_avg_spending": 0.0,
+                    "current_savings_rate_pct": 0.0,
+                    "emergency_runway_months": 0.0,
+                    "projections": [],
+                    "scenarios_6_month": {
+                        "conservative": {"total": 0.0, "monthly_avg": 0.0, "label": "Conservative (-18%)"},
+                        "baseline": {"total": 0.0, "monthly_avg": 0.0, "label": "Baseline Trajectory"},
+                        "wyvern_optimized": {"total": 0.0, "monthly_avg": 0.0, "extra_accumulated": 0.0, "label": "Wyvern Optimized"}
+                    }
+                },
+                "plaid_status": self.plaid_status
+            }
+
         total_assets = sum(a["balance"] for a in self.accounts if a["balance"] > 0)
         total_liabilities = sum(abs(a["balance"]) for a in self.accounts if a["balance"] < 0)
         net_worth = total_assets - total_liabilities
@@ -314,7 +334,7 @@ class DataStore:
         forecast_data = forecaster.forecast(self.monthly_history, horizon_months=6)
 
         return {
-            "profile_configured": self.profile_configured,
+            "profile_configured": True,
             "profile_data": self.profile_data,
             "currency": "INR",
             "currency_symbol": "₹",

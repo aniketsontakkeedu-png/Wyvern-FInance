@@ -42,7 +42,7 @@
         </div>
 
         <button onclick="openOnboardingModal()" class="btn-nothing text-xs py-1.5 px-3">
-          ⚡ EDIT FINANCIAL PROFILE
+          ⚡ RECALIBRATE PROFILE (₹)
         </button>
 
         <button id="btn-audio-toggle" onclick="toggleAudio()" class="btn-nothing text-xs py-1.5 px-3 text-white">
@@ -56,6 +56,22 @@
 
     </div>
   </header>
+
+  <!-- ============================================================== -->
+  <!-- HERO CALIBRATION PROMPT (SHOWN AT START IF UNCONFIGURED)       -->
+  <!-- ============================================================== -->
+  <div id="unconfigured-banner" class="max-w-7xl mx-auto px-4 sm:px-6 pt-6 hidden">
+    <div class="bento-card border-[#D71921] p-6 text-center relative overflow-hidden bg-gradient-to-b from-[#141414] to-[#0a0a0a]">
+      <div class="glyph-indicator mx-auto mb-3"></div>
+      <h2 class="font-ndot text-xl text-white font-bold mb-2">INITIAL FINANCIAL CALIBRATION REQUIRED</h2>
+      <p class="text-xs text-[#aaa] max-w-xl mx-auto mb-5 leading-relaxed">
+        Wyvern does not use pre-baked placeholder accounts. Please provide your real monthly earnings, net worth assets, investments, and category spending to calibrate your machine learning models and personal budgeting algorithms.
+      </p>
+      <button onclick="openOnboardingModal()" class="btn-nothing btn-nothing-red text-xs py-2.5 px-6 font-bold tracking-wider">
+        START FINANCIAL SETUP WIZARD (₹) →
+      </button>
+    </div>
+  </div>
 
   <!-- Main Container -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -96,7 +112,7 @@
           <span class="text-xs font-mono text-[#888] uppercase tracking-wider block mb-1">Total Net Worth</span>
           <div id="stat-net-worth" class="font-ndot text-3xl font-bold text-white mb-2">₹0</div>
           <div class="flex items-center justify-between text-[11px] font-mono text-[#777]">
-            <span>Calibrated with your real data</span>
+            <span id="nw-subtext">Savings + Investments - Debt</span>
             <button onclick="openOnboardingModal()" class="text-white underline hover:text-[#D71921]">Edit</button>
           </div>
         </div>
@@ -107,7 +123,7 @@
           <span class="text-xs font-mono text-[#888] uppercase tracking-wider block mb-1">Monthly Outflows</span>
           <div id="stat-monthly-spend" class="font-ndot text-3xl font-bold text-white mb-2">₹0</div>
           <div class="flex items-center justify-between text-[11px] font-mono text-[#777]">
-            <span>Velocity: Normal</span>
+            <span>Category Spending</span>
             <span class="text-[#888]">Real Allocations</span>
           </div>
         </div>
@@ -182,7 +198,7 @@
             <div class="mb-4">
               <div class="flex items-center justify-between text-xs font-mono mb-1">
                 <span class="text-[#bbb]">Needs (Ideal: 50%)</span>
-                <span id="val-needs" class="text-white font-bold">50%</span>
+                <span id="val-needs" class="text-white font-bold">--%</span>
               </div>
               <div class="glyph-meter-container">
                 <div id="bar-needs" class="glyph-meter-fill" style="width: 50%;"></div>
@@ -193,7 +209,7 @@
             <div class="mb-4">
               <div class="flex items-center justify-between text-xs font-mono mb-1">
                 <span class="text-[#bbb]">Wants (Ideal: 30%)</span>
-                <span id="val-wants" class="text-[#ff4d5a] font-bold">30%</span>
+                <span id="val-wants" class="text-[#ff4d5a] font-bold">--%</span>
               </div>
               <div class="glyph-meter-container">
                 <div id="bar-wants" class="glyph-meter-fill red" style="width: 30%;"></div>
@@ -204,7 +220,7 @@
             <div class="mb-4">
               <div class="flex items-center justify-between text-xs font-mono mb-1">
                 <span class="text-[#bbb]">Savings (Ideal: 20%)</span>
-                <span id="val-savings" class="text-[#4ade80] font-bold">20%</span>
+                <span id="val-savings" class="text-[#4ade80] font-bold">--%</span>
               </div>
               <div class="glyph-meter-container">
                 <div id="bar-savings" class="glyph-meter-fill" style="width: 20%; background: #4ade80;"></div>
@@ -213,7 +229,7 @@
           </div>
 
           <div class="pt-4 border-t border-[#222] text-xs font-mono text-[#888] flex items-center justify-between">
-            <span>Potential Alpha: <strong class="text-white">+18%</strong></span>
+            <span>Actionable Lift: <strong class="text-white">+18%</strong></span>
             <button onclick="switchTab('budget')" class="underline hover:text-white">Rebalance</button>
           </div>
         </div>
@@ -683,108 +699,133 @@
   <!-- MODAL: ONBOARDING FINANCIAL QUESTIONNAIRE (USER REAL INPUTS)  -->
   <!-- ============================================================== -->
   <div id="onboarding-modal" class="nothing-modal-backdrop hidden">
-    <div class="nothing-modal max-w-2xl max-h-[90vh] overflow-y-auto pr-2">
-      <div class="flex items-center justify-between mb-3">
+    <div class="nothing-modal max-w-2xl max-h-[92vh] overflow-y-auto pr-2">
+      <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-2">
           <span class="glyph-indicator"></span>
-          <h3 class="font-ndot text-xl text-white font-bold">CALIBRATE YOUR FINANCIAL PROFILE (₹)</h3>
+          <h3 class="font-ndot text-xl text-white font-bold">FINANCIAL INTAKE & PROFILE CALIBRATION</h3>
         </div>
         <button onclick="closeOnboardingModal()" class="text-[#777] hover:text-white font-mono text-sm">✕</button>
       </div>
-      <p class="text-xs text-[#aaa] mb-6 leading-relaxed">
-        Wyvern uses your <strong>actual financial data</strong> instead of dummy profiles to generate accurate ML spending categorization, forecast savings, and create customized 50/30/20 recommendations.
+      <p class="text-xs text-[#aaa] mb-4 leading-relaxed font-mono">
+        Enter your actual numbers below. Wyvern uses your exact figures to calculate Net Worth, model category allocations, and forecast savings.
       </p>
 
-      <form onsubmit="submitOnboardingForm(event)" class="space-y-6">
+      <!-- Live Dynamic Calculation Pill Bar -->
+      <div class="p-3 rounded-xl bg-[#111] border border-[#2c2c2c] mb-5 grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs font-mono">
+        <div>
+          <span class="text-[#777] block text-[10px] uppercase">Net Worth Preview</span>
+          <span id="preview-networth" class="text-white font-bold font-ndot text-sm">₹0</span>
+        </div>
+        <div class="border-y sm:border-y-0 sm:border-x border-[#222] py-1 sm:py-0">
+          <span class="text-[#777] block text-[10px] uppercase">Monthly Inflow</span>
+          <span id="preview-inflow" class="text-[#4ade80] font-bold font-ndot text-sm">₹0</span>
+        </div>
+        <div>
+          <span class="text-[#777] block text-[10px] uppercase">Monthly Outflows</span>
+          <span id="preview-outflow" class="text-[#ff4d5a] font-bold font-ndot text-sm">₹0</span>
+        </div>
+      </div>
+
+      <form onsubmit="submitOnboardingForm(event)" class="space-y-5">
         
-        <!-- Section 1: Inflow / Earnings -->
+        <!-- Section 1: Earnings & Inflows -->
         <div class="p-4 rounded-2xl bg-[#0d0d0d] border border-[#242424]">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="badge-ndot badge-white text-[10px]">STEP 01</span>
-            <h4 class="font-ndot text-sm text-white font-bold">MONTHLY EARNINGS & INFLOWS (₹)</h4>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="badge-ndot badge-white text-[10px]">STEP 01</span>
+              <h4 class="font-ndot text-sm text-white font-bold">MONTHLY EARNINGS & INFLOWS (₹)</h4>
+            </div>
+            <span class="text-[11px] font-mono text-[#666]">Take-Home Income</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">Primary Monthly Take-Home Salary (₹) *</label>
-              <input id="ob-salary" type="number" step="500" required placeholder="e.g. 85000" class="nothing-input" value="85000">
+              <label class="block text-xs font-mono text-[#888] mb-1">Primary Monthly Salary (₹) *</label>
+              <input id="ob-salary" type="number" step="100" required placeholder="₹ 0" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">Secondary / Freelance / Dividend (₹)</label>
-              <input id="ob-secondary" type="number" step="500" placeholder="e.g. 15000" class="nothing-input" value="15000">
+              <label class="block text-xs font-mono text-[#888] mb-1">Secondary / Freelance / Other (₹)</label>
+              <input id="ob-secondary" type="number" step="100" placeholder="₹ 0" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
           </div>
         </div>
 
-        <!-- Section 2: Current Balances & Reserves -->
+        <!-- Section 2: Net Worth, Assets & Debt -->
         <div class="p-4 rounded-2xl bg-[#0d0d0d] border border-[#242424]">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="badge-ndot badge-white text-[10px]">STEP 02</span>
-            <h4 class="font-ndot text-sm text-white font-bold">CURRENT ASSETS & BALANCES (₹)</h4>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="badge-ndot badge-white text-[10px]">STEP 02</span>
+              <h4 class="font-ndot text-sm text-white font-bold">NET WORTH, ASSETS & DEBT (₹)</h4>
+            </div>
+            <span class="text-[11px] font-mono text-[#666]">Balance Sheet</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">Bank Savings / Cash (₹) *</label>
-              <input id="ob-savings" type="number" step="1000" required placeholder="e.g. 250000" class="nothing-input" value="250000">
+              <label class="block text-xs font-mono text-[#888] mb-1">Bank Savings & Cash (₹) *</label>
+              <input id="ob-savings" type="number" step="500" required placeholder="₹ 0" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">Investments (Stocks/MFs) (₹) *</label>
-              <input id="ob-investments" type="number" step="1000" required placeholder="e.g. 650000" class="nothing-input" value="650000">
+              <label class="block text-xs font-mono text-[#888] mb-1">Current Investments (₹) *</label>
+              <input id="ob-investments" type="number" step="500" required placeholder="₹ 0 (MFs, Stocks, PPF)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">Current Credit Debt / Loans (₹)</label>
-              <input id="ob-debt" type="number" step="500" placeholder="e.g. 18000" class="nothing-input" value="18000">
+              <label class="block text-xs font-mono text-[#888] mb-1">Outstanding Debt / EMIs (₹)</label>
+              <input id="ob-debt" type="number" step="500" placeholder="₹ 0 (Credit Cards, Loans)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
           </div>
           <div class="mt-3">
             <label class="block text-xs font-mono text-[#888] mb-1">Target Monthly SIP / Investment Outlay (₹)</label>
-            <input id="ob-sip" type="number" step="500" placeholder="e.g. 20000" class="nothing-input" value="20000">
+            <input id="ob-sip" type="number" step="500" placeholder="₹ 0 (e.g. ₹15,000 / month)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
           </div>
         </div>
 
-        <!-- Section 3: Category Spending Breakdown -->
+        <!-- Section 3: Monthly Spending by Category -->
         <div class="p-4 rounded-2xl bg-[#0d0d0d] border border-[#242424]">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="badge-ndot badge-red text-[10px]">STEP 03</span>
-            <h4 class="font-ndot text-sm text-white font-bold">MONTHLY SPENDING ALLOCATIONS BY CATEGORY (₹)</h4>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="badge-ndot badge-red text-[10px]">STEP 03</span>
+              <h4 class="font-ndot text-sm text-white font-bold">MONTHLY SPENDING ALLOCATIONS BY CATEGORY (₹)</h4>
+            </div>
+            <span class="text-[11px] font-mono text-[#666]">Category Budgets</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-mono text-[#888] mb-1">Food & Dining / Groceries (₹)</label>
-              <input id="ob-cat-food" type="number" step="500" placeholder="e.g. 16000" class="nothing-input" value="16000">
+              <input id="ob-cat-food" type="number" step="100" placeholder="₹ 0 (Swiggy, Blinkit, Supermarket)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">House Rent / Electricity & Bills (₹)</label>
-              <input id="ob-cat-bills" type="number" step="500" placeholder="e.g. 24000" class="nothing-input" value="24000">
+              <label class="block text-xs font-mono text-[#888] mb-1">House Rent / Bills & Utilities (₹)</label>
+              <input id="ob-cat-bills" type="number" step="100" placeholder="₹ 0 (Rent, Power, Wifi, Gas)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
               <label class="block text-xs font-mono text-[#888] mb-1">Transportation / Fuel / Metro (₹)</label>
-              <input id="ob-cat-transit" type="number" step="200" placeholder="e.g. 5000" class="nothing-input" value="5000">
+              <input id="ob-cat-transit" type="number" step="100" placeholder="₹ 0 (Petrol, Metro, Cabs)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">Subscriptions (OTT, Software, Gym) (₹)</label>
-              <input id="ob-cat-subs" type="number" step="100" placeholder="e.g. 2500" class="nothing-input" value="2500">
+              <label class="block text-xs font-mono text-[#888] mb-1">Subscriptions & Digital (₹)</label>
+              <input id="ob-cat-subs" type="number" step="50" placeholder="₹ 0 (OTT, Spotify, Software)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
-              <label class="block text-xs font-mono text-[#888] mb-1">Shopping & Lifestyle / E-Commerce (₹)</label>
-              <input id="ob-cat-shopping" type="number" step="500" placeholder="e.g. 8000" class="nothing-input" value="8000">
+              <label class="block text-xs font-mono text-[#888] mb-1">Shopping & Lifestyle / Retail (₹)</label>
+              <input id="ob-cat-shopping" type="number" step="100" placeholder="₹ 0 (Amazon, Fashion, Tech)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
             <div>
               <label class="block text-xs font-mono text-[#888] mb-1">Health, Fitness & Pharmacy (₹)</label>
-              <input id="ob-cat-health" type="number" step="200" placeholder="e.g. 3500" class="nothing-input" value="3500">
+              <input id="ob-cat-health" type="number" step="100" placeholder="₹ 0 (Gym, Medicines, Doctor)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
             </div>
           </div>
           <div class="mt-3">
-            <label class="block text-xs font-mono text-[#888] mb-1">Entertainment, Weekend Outings & Leisure (₹)</label>
-            <input id="ob-cat-entertainment" type="number" step="500" placeholder="e.g. 4500" class="nothing-input" value="4500">
+            <label class="block text-xs font-mono text-[#888] mb-1">Entertainment & Weekend Leisure (₹)</label>
+            <input id="ob-cat-entertainment" type="number" step="100" placeholder="₹ 0 (Dining Out, Movies, Games)" class="nothing-input ob-live-calc" oninput="updateLiveCalculations()">
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 pt-2">
+        <div class="flex items-center justify-between pt-2">
           <button type="button" onclick="closeOnboardingModal()" class="btn-nothing text-xs py-2 px-4">
             CANCEL
           </button>
-          <button type="submit" class="btn-nothing btn-nothing-red text-xs py-2.5 px-6">
-            CALIBRATE WYVERN OS (₹)
+          <button type="submit" class="btn-nothing btn-nothing-red text-xs py-2.5 px-6 font-bold tracking-wide">
+            INITIALIZE WYVERN OS // SAVE CALIBRATION (₹)
           </button>
         </div>
 

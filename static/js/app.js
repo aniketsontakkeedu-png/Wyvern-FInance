@@ -66,6 +66,37 @@ function switchTab(tabName) {
   }
 }
 
+// Live calculation preview in the Onboarding Form
+function updateLiveCalculations() {
+  const salary = parseFloat(document.getElementById('ob-salary')?.value) || 0;
+  const secondary = parseFloat(document.getElementById('ob-secondary')?.value) || 0;
+  const savings = parseFloat(document.getElementById('ob-savings')?.value) || 0;
+  const investments = parseFloat(document.getElementById('ob-investments')?.value) || 0;
+  const debt = parseFloat(document.getElementById('ob-debt')?.value) || 0;
+  const sip = parseFloat(document.getElementById('ob-sip')?.value) || 0;
+
+  const food = parseFloat(document.getElementById('ob-cat-food')?.value) || 0;
+  const bills = parseFloat(document.getElementById('ob-cat-bills')?.value) || 0;
+  const transit = parseFloat(document.getElementById('ob-cat-transit')?.value) || 0;
+  const subs = parseFloat(document.getElementById('ob-cat-subs')?.value) || 0;
+  const shopping = parseFloat(document.getElementById('ob-cat-shopping')?.value) || 0;
+  const health = parseFloat(document.getElementById('ob-cat-health')?.value) || 0;
+  const entertainment = parseFloat(document.getElementById('ob-cat-entertainment')?.value) || 0;
+
+  const totalInflow = salary + secondary;
+  const totalNetWorth = savings + investments - debt;
+  const totalOutflows = food + bills + transit + subs + shopping + health + entertainment + sip;
+
+  const nwEl = document.getElementById('preview-networth');
+  if (nwEl) nwEl.textContent = formatMoney(totalNetWorth);
+
+  const inEl = document.getElementById('preview-inflow');
+  if (inEl) inEl.textContent = formatMoney(totalInflow);
+
+  const outEl = document.getElementById('preview-outflow');
+  if (outEl) outEl.textContent = formatMoney(totalOutflows);
+}
+
 // API Calls
 async function loadOverview() {
   try {
@@ -74,9 +105,13 @@ async function loadOverview() {
     STATE.overview = data;
     STATE.profileConfigured = data.profile_configured;
 
-    // If profile is not configured yet, launch onboarding questionnaire!
+    const banner = document.getElementById('unconfigured-banner');
     if (!data.profile_configured) {
+      if (banner) banner.classList.remove('hidden');
+      // Automatically prompt the user to input their figures right at the start
       openOnboardingModal();
+    } else {
+      if (banner) banner.classList.add('hidden');
     }
 
     renderOverviewUI(data);
@@ -145,34 +180,36 @@ async function loadMLForecast() {
 
 // UI Renderers
 function renderOverviewUI(data) {
-  document.getElementById('stat-net-worth').textContent = formatMoney(data.net_worth);
-  document.getElementById('stat-monthly-spend').textContent = formatMoney(data.current_period_spending);
-  document.getElementById('stat-savings-forecast').textContent = formatMoney(data.forecast.current_monthly_avg_savings) + '/mo';
+  const isConfigured = data.profile_configured;
+
+  document.getElementById('stat-net-worth').textContent = isConfigured ? formatMoney(data.net_worth) : 'AWAITING SETUP';
+  document.getElementById('stat-monthly-spend').textContent = isConfigured ? formatMoney(data.current_period_spending) : '₹0';
+  document.getElementById('stat-savings-forecast').textContent = isConfigured ? formatMoney(data.forecast.current_monthly_avg_savings) + '/mo' : 'Awaiting Data';
   
   const anomBadge = document.getElementById('stat-anomaly-count');
   if (anomBadge) {
-    anomBadge.textContent = `${data.anomaly_count} ANOMALIES DETECTED`;
+    anomBadge.textContent = isConfigured ? `${data.anomaly_count} ANOMALIES DETECTED` : 'RADAR STANDBY';
     anomBadge.className = data.anomaly_count > 0 ? 'badge-ndot badge-red' : 'badge-ndot badge-white';
   }
 
   const savRateEl = document.getElementById('stat-savings-rate');
   if (savRateEl) {
-    savRateEl.textContent = `${data.forecast.current_savings_rate_pct}%`;
+    savRateEl.textContent = isConfigured ? `${data.forecast.current_savings_rate_pct}%` : '--%';
   }
 
   const runwayEl = document.getElementById('stat-runway');
   if (runwayEl) {
-    runwayEl.textContent = `${data.forecast.emergency_runway_months} MO`;
+    runwayEl.textContent = isConfigured ? `${data.forecast.emergency_runway_months} MO` : '-- MO';
   }
 
   const plaidPill = document.getElementById('header-plaid-status');
   if (plaidPill && data.plaid_status) {
-    plaidPill.textContent = `${data.plaid_status.institution_name.toUpperCase()} // ACTIVE`;
+    plaidPill.textContent = isConfigured ? `${data.plaid_status.institution_name.toUpperCase()} // ACTIVE` : 'ACCOUNT AGGREGATOR // READY';
   }
 
   // 50/30/20 bars
   const r = data.rule_50_30_20;
-  if (r) {
+  if (r && isConfigured) {
     document.getElementById('bar-needs').style.width = `${Math.min(100, r.needs.pct)}%`;
     document.getElementById('val-needs').textContent = `${r.needs.pct}% (${formatMoney(r.needs.amount)})`;
 
@@ -183,27 +220,40 @@ function renderOverviewUI(data) {
     document.getElementById('val-savings').textContent = `${r.savings.pct}% (${formatMoney(r.savings.amount)})`;
   }
 
-  // Render overview chart in INR
-  renderForecastChart('overviewForecastChart', data.forecast, '₹');
+  // Render overview chart in INR if configured
+  if (isConfigured && data.forecast && data.forecast.projections.length > 0) {
+    renderForecastChart('overviewForecastChart', data.forecast, '₹');
+  }
 
   // Quick Recommendations list
   const recsContainer = document.getElementById('overview-recommendations');
-  if (recsContainer && data.top_recommendations) {
-    recsContainer.innerHTML = data.top_recommendations.map(r => `
-      <div class="p-4 rounded-2xl bg-[#161616] border border-[#262626] flex items-start justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <span class="badge-ndot ${r.priority === 'HIGH' ? 'badge-red' : 'badge-white'} text-[10px]">${r.badge}</span>
-            <span class="text-xs font-mono text-[#888]">+${formatMoney(r.monthly_savings_impact)}/mo</span>
-          </div>
-          <h4 class="text-sm font-semibold text-white mb-1">${r.title}</h4>
-          <p class="text-xs text-[#999] leading-relaxed">${r.description}</p>
+  if (recsContainer) {
+    if (!isConfigured || !data.top_recommendations || data.top_recommendations.length === 0) {
+      recsContainer.innerHTML = `
+        <div class="col-span-3 p-6 rounded-2xl bg-[#111] border border-[#262626] text-center">
+          <p class="text-xs font-mono text-[#888] mb-3">No personal recommendations generated yet. Complete the financial intake setup to calibrate.</p>
+          <button onclick="openOnboardingModal()" class="btn-nothing btn-nothing-red text-xs py-1.5 px-4">
+            ENTER FINANCIAL DATA →
+          </button>
         </div>
-        <button onclick="switchTab('budget')" class="btn-nothing text-[11px] py-1.5 px-3 flex-shrink-0">
-          VIEW
-        </button>
-      </div>
-    `).join('');
+      `;
+    } else {
+      recsContainer.innerHTML = data.top_recommendations.map(r => `
+        <div class="p-4 rounded-2xl bg-[#161616] border border-[#262626] flex items-start justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="badge-ndot ${r.priority === 'HIGH' ? 'badge-red' : 'badge-white'} text-[10px]">${r.badge}</span>
+              <span class="text-xs font-mono text-[#888]">+${formatMoney(r.monthly_savings_impact)}/mo</span>
+            </div>
+            <h4 class="text-sm font-semibold text-white mb-1">${r.title}</h4>
+            <p class="text-xs text-[#999] leading-relaxed">${r.description}</p>
+          </div>
+          <button onclick="switchTab('budget')" class="btn-nothing text-[11px] py-1.5 px-3 flex-shrink-0">
+            VIEW
+          </button>
+        </div>
+      `).join('');
+    }
   }
 }
 
@@ -211,8 +261,8 @@ function renderTransactionsTable(transactions) {
   const tbody = document.getElementById('transactions-tbody');
   if (!tbody) return;
 
-  if (transactions.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-[#666]">No transactions recorded yet. Complete onboarding or add a transaction above.</td></tr>`;
+  if (!STATE.profileConfigured || transactions.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-[#666] font-mono text-xs">No transactions recorded. Click "⚡ RECALIBRATE PROFILE (₹)" or "+ ADD TRANSACTION" to ingest data.</td></tr>`;
     return;
   }
 
@@ -260,8 +310,8 @@ function renderAnomaliesRadar(transactions) {
 
   const anomalies = transactions.filter(t => t.anomaly_analysis && t.anomaly_analysis.is_anomaly);
 
-  if (anomalies.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-[#666] font-mono">No spending anomalies detected. All category transactions within baseline.</div>`;
+  if (!STATE.profileConfigured || anomalies.length === 0) {
+    container.innerHTML = `<div class="p-6 text-center text-[#666] font-mono text-xs">No spending anomalies detected. All category transactions within baseline.</div>`;
     return;
   }
 
@@ -302,7 +352,9 @@ function renderAnomaliesRadar(transactions) {
 function renderBudgetUI(data) {
   if (!data) return;
 
-  renderCategoryChart('budgetCategoryChart', data.category_breakdown);
+  if (STATE.profileConfigured && data.category_breakdown && data.category_breakdown.length > 0) {
+    renderCategoryChart('budgetCategoryChart', data.category_breakdown);
+  }
 
   const subsList = document.getElementById('subscriptions-list');
   if (subsList && data.subscriptions) {
@@ -310,18 +362,22 @@ function renderBudgetUI(data) {
     document.getElementById('sub-annual-total').textContent = formatMoney(data.subscriptions.annual_total);
     document.getElementById('sub-count').textContent = data.subscriptions.count;
 
-    subsList.innerHTML = data.subscriptions.items.map(s => `
-      <div class="flex items-center justify-between p-3.5 rounded-xl bg-[#161616] border border-[#262626]">
-        <div>
-          <div class="text-sm font-semibold text-white">${s.merchant}</div>
-          <div class="text-[11px] font-mono text-[#777]">Recurring Monthly</div>
+    if (data.subscriptions.items.length === 0) {
+      subsList.innerHTML = `<div class="text-center py-4 text-[#666] text-xs font-mono">No active recurring digital subscriptions recorded.</div>`;
+    } else {
+      subsList.innerHTML = data.subscriptions.items.map(s => `
+        <div class="flex items-center justify-between p-3.5 rounded-xl bg-[#161616] border border-[#262626]">
+          <div>
+            <div class="text-sm font-semibold text-white">${s.merchant}</div>
+            <div class="text-[11px] font-mono text-[#777]">Recurring Monthly</div>
+          </div>
+          <div class="text-right">
+            <div class="font-mono font-bold text-white">${formatMoney(s.amount)}/mo</div>
+            <div class="text-[11px] font-mono text-[#666]">${formatMoney(s.amount * 12)}/yr</div>
+          </div>
         </div>
-        <div class="text-right">
-          <div class="font-mono font-bold text-white">${formatMoney(s.amount)}/mo</div>
-          <div class="text-[11px] font-mono text-[#666]">${formatMoney(s.amount * 12)}/yr</div>
-        </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 
   const fullRecsContainer = document.getElementById('budget-full-recommendations');
@@ -467,10 +523,12 @@ function renderInvestmentsUI() {
 }
 
 function renderForecastUI(forecastData) {
-  renderForecastChart('mlDetailedForecastChart', forecastData, '₹');
+  if (STATE.profileConfigured && forecastData.projections && forecastData.projections.length > 0) {
+    renderForecastChart('mlDetailedForecastChart', forecastData, '₹');
+  }
 
   const sc = forecastData.scenarios_6_month;
-  if (sc) {
+  if (sc && STATE.profileConfigured) {
     document.getElementById('sc-conservative-total').textContent = formatMoney(sc.conservative.total);
     document.getElementById('sc-conservative-avg').textContent = formatMoney(sc.conservative.monthly_avg) + '/mo';
 
@@ -483,16 +541,20 @@ function renderForecastUI(forecastData) {
   }
 
   const tbody = document.getElementById('ml-forecast-tbody');
-  if (tbody && forecastData.projections) {
-    tbody.innerHTML = forecastData.projections.map(p => `
-      <tr>
-        <td class="font-mono text-white font-semibold">${p.month}</td>
-        <td class="font-mono text-right text-[#4ade80] font-bold">${formatMoney(p.projected_savings)}</td>
-        <td class="font-mono text-right text-[#888]">${formatMoney(p.lower_bound)} - ${formatMoney(p.upper_bound)}</td>
-        <td class="font-mono text-right text-white">${p.savings_rate_pct}%</td>
-        <td class="font-mono text-right text-[#ff4d5a] font-bold">${formatMoney(p.cumulative_projected)}</td>
-      </tr>
-    `).join('');
+  if (tbody) {
+    if (!STATE.profileConfigured || !forecastData.projections || forecastData.projections.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-[#666] font-mono text-xs">Awaiting profile calibration to compute savings forecast.</td></tr>`;
+    } else {
+      tbody.innerHTML = forecastData.projections.map(p => `
+        <tr>
+          <td class="font-mono text-white font-semibold">${p.month}</td>
+          <td class="font-mono text-right text-[#4ade80] font-bold">${formatMoney(p.projected_savings)}</td>
+          <td class="font-mono text-right text-[#888]">${formatMoney(p.lower_bound)} - ${formatMoney(p.upper_bound)}</td>
+          <td class="font-mono text-right text-white">${p.savings_rate_pct}%</td>
+          <td class="font-mono text-right text-[#ff4d5a] font-bold">${formatMoney(p.cumulative_projected)}</td>
+        </tr>
+      `).join('');
+    }
   }
 }
 
@@ -605,8 +667,8 @@ function openOnboardingModal() {
   const modal = document.getElementById('onboarding-modal');
   if (modal) modal.classList.remove('hidden');
 
-  // If profile exists, prefill fields
-  if (STATE.overview && STATE.overview.profile_data) {
+  // If user profile was saved, prefill existing numbers for easy editing
+  if (STATE.overview && STATE.overview.profile_data && STATE.overview.profile_configured) {
     const p = STATE.overview.profile_data;
     if (document.getElementById('ob-salary')) document.getElementById('ob-salary').value = p.monthly_salary || '';
     if (document.getElementById('ob-secondary')) document.getElementById('ob-secondary').value = p.secondary_income || '';
@@ -624,6 +686,7 @@ function openOnboardingModal() {
     if (document.getElementById('ob-cat-health')) document.getElementById('ob-cat-health').value = cs['Health & Fitness'] || '';
     if (document.getElementById('ob-cat-entertainment')) document.getElementById('ob-cat-entertainment').value = cs['Entertainment & Leisure'] || '';
   }
+  updateLiveCalculations();
 }
 
 function closeOnboardingModal() {
@@ -661,7 +724,7 @@ async function submitOnboardingForm(e) {
     credit_debt: debt,
     target_monthly_sip: sip,
     category_spending: categorySpending,
-    primary_bank: "HDFC Bank Ltd (India)"
+    primary_bank: "Primary Bank Account"
   };
 
   try {
@@ -673,6 +736,7 @@ async function submitOnboardingForm(e) {
     const result = await res.json();
     haptics.playPop();
     closeOnboardingModal();
+
     alert('Wyvern FinTech OS successfully calibrated with your exact financial data!');
 
     loadOverview();
@@ -861,7 +925,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Periodic indices refresh (every 30 seconds)
   setInterval(() => {
     if (STATE.activeTab === 'market' || STATE.activeTab === 'overview') {
       loadMarketIndices();
