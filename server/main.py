@@ -1,5 +1,5 @@
 """
-Wyvern Fintech OS - Main FastAPI Backend Application
+Wyvern Fintech OS - Main FastAPI Backend Application (INR Edition)
 """
 import os
 from typing import Dict, Any, List, Optional
@@ -17,8 +17,8 @@ from .plaid_service import plaid_service
 
 app = FastAPI(
     title="Wyvern Fintech OS",
-    description="Intelligent financial operating system with ML spending categorization, anomaly detection, savings forecasting, Plaid integration, and India & Global investment intelligence.",
-    version="1.0.0"
+    description="Intelligent financial operating system in Indian Rupees (₹) with real user profile ingestion, ML spending categorization, anomaly detection, savings forecasting, Plaid/Account Aggregator integration, and India & Global investment intelligence.",
+    version="2.0.0"
 )
 
 app.add_middleware(
@@ -30,6 +30,16 @@ app.add_middleware(
 )
 
 # Request schemas
+class UserProfileSetupRequest(BaseModel):
+    monthly_salary: float
+    secondary_income: Optional[float] = 0.0
+    savings_balance: float
+    investment_balance: float
+    credit_debt: Optional[float] = 0.0
+    target_monthly_sip: Optional[float] = 0.0
+    category_spending: Dict[str, float]
+    primary_bank: Optional[str] = "HDFC Bank Ltd"
+
 class CategorizeRequest(BaseModel):
     description: str
 
@@ -48,16 +58,35 @@ class SipCalculateRequest(BaseModel):
 
 class PlaidExchangeRequest(BaseModel):
     public_token: str
-    institution_name: Optional[str] = "JPMorgan Chase & Co."
+    institution_name: Optional[str] = "HDFC Bank Ltd (India)"
 
 # API Endpoints
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "app": "Wyvern", "engine": "online"}
+    return {"status": "ok", "app": "Wyvern", "currency": "INR", "engine": "online"}
+
+@app.get("/api/profile")
+def get_profile():
+    return {
+        "profile_configured": store.profile_configured,
+        "profile_data": store.profile_data
+    }
+
+@app.post("/api/profile/setup")
+def setup_profile(req: UserProfileSetupRequest):
+    """Configures Wyvern with real user earnings, spending by category, and asset balances."""
+    res = store.setup_user_profile(req.model_dump())
+    return {"status": "success", "summary": res}
+
+@app.post("/api/profile/reset")
+def reset_profile():
+    """Resets the profile to unconfigured state so the user can re-enter numbers."""
+    store.reset_profile()
+    return {"status": "reset", "profile_configured": False}
 
 @app.get("/api/overview")
 def get_overview():
-    """Provides high-level dashboard metrics, net worth, forecast snapshot, and anomaly alerts."""
+    """Provides high-level dashboard metrics, net worth, forecast snapshot, and anomaly alerts in INR."""
     summary = store.get_summary_stats()
     accounts = store.get_accounts()
     budget = budget_engine.analyze_budget(store.get_transactions(), accounts)
@@ -71,12 +100,12 @@ def get_overview():
 
 @app.get("/api/transactions")
 def get_transactions(limit: int = 50):
-    """Returns list of transactions augmented with ML category and anomaly diagnosis."""
+    """Returns list of user transactions augmented with ML category and anomaly diagnosis."""
     return store.get_transactions(limit=limit)
 
 @app.post("/api/transactions")
 def add_transaction(req: TransactionCreateRequest):
-    """Adds a new transaction, processes it through ML models, and saves it."""
+    """Adds a new real transaction, processes it through ML models, and saves it."""
     tx = store.add_transaction(req.model_dump())
     return {"status": "success", "transaction": tx}
 
@@ -88,7 +117,7 @@ def ml_categorize(req: CategorizeRequest):
 
 @app.get("/api/ml/forecast")
 def ml_forecast(horizon: int = 6):
-    """Calculates ML savings forecast, confidence bounds, and scenario simulations."""
+    """Calculates ML savings forecast, confidence bounds, and scenario simulations based on user profile."""
     history = store.get_monthly_history()
     return forecaster.forecast(history, horizon_months=horizon)
 
@@ -126,7 +155,7 @@ def get_global_market():
 
 @app.post("/api/calculator/sip")
 def calculate_sip(req: SipCalculateRequest):
-    """Calculates monthly compound growth for SIP investments with step-up."""
+    """Calculates monthly compound growth for SIP investments with step-up in INR."""
     return market_service.calculate_sip(
         monthly_investment=req.monthly_investment,
         annual_return_pct=req.annual_return_pct,
@@ -134,7 +163,7 @@ def calculate_sip(req: SipCalculateRequest):
         step_up_pct=req.step_up_pct or 0.0
     )
 
-# Plaid API Endpoints
+# Plaid / Account Aggregator API Endpoints
 @app.post("/api/plaid/create-link-token")
 def plaid_create_link_token():
     return plaid_service.create_link_token()
@@ -142,7 +171,6 @@ def plaid_create_link_token():
 @app.post("/api/plaid/exchange-token")
 def plaid_exchange_token(req: PlaidExchangeRequest):
     result = plaid_service.exchange_public_token(req.public_token, req.institution_name)
-    # Update local store status
     store.plaid_status["connected"] = True
     store.plaid_status["institution_name"] = req.institution_name
     store.plaid_status["last_synced"] = result.get("synced_at", "Just now")

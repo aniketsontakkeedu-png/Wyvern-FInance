@@ -1,11 +1,10 @@
 /**
- * Wyvern Fintech OS - Main Frontend Application Logic
+ * Wyvern Fintech OS - Main Frontend Application Logic (INR Edition)
  */
 
 const STATE = {
   activeTab: 'overview',
-  currency: 'USD', // 'USD' or 'INR'
-  fxRate: 83.5, // 1 USD = 83.5 INR
+  currency: 'INR', // Indian Rupees
   overview: null,
   transactions: [],
   budget: null,
@@ -15,29 +14,19 @@ const STATE = {
   investmentRegion: 'india', // 'india' or 'global'
   forecastHorizon: 6,
   audioMuted: false,
-  autoRefreshTimer: null
+  profileConfigured: false
 };
 
-// Formatting utilities
-function formatMoney(amount, currency = null) {
-  const curr = currency || STATE.currency;
+// Formatting utilities in Indian Rupees (₹)
+function formatMoney(amount, currency = 'INR') {
   let val = Number(amount) || 0;
-  if (curr === 'INR' && (!currency || currency === 'USD')) {
-    val = val * STATE.fxRate;
-    return '₹' + val.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-  } else if (curr === 'INR') {
-    return '₹' + val.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-  } else {
-    return '$' + val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+  return '₹' + val.toLocaleString('en-IN', {
+    maximumFractionDigits: 0
+  });
 }
 
 function formatRawINR(amount) {
   return '₹' + (Number(amount) || 0).toLocaleString('en-IN');
-}
-
-function formatRawUSD(amount) {
-  return '$' + (Number(amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 // Clock & Telemetry
@@ -45,10 +34,10 @@ function startClock() {
   const clockEl = document.getElementById('live-clock');
   function update() {
     const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
-    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
+    const timeStr = now.toLocaleTimeString('en-IN', { hour12: false });
+    const dateStr = now.toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase();
     if (clockEl) {
-      clockEl.innerHTML = `<span class="text-[#888]">${dateStr}</span> <span class="text-white font-bold">${timeStr}</span>`;
+      clockEl.innerHTML = `<span class="text-[#888]">${dateStr}</span> <span class="text-white font-bold">${timeStr} IST</span>`;
     }
   }
   update();
@@ -68,7 +57,6 @@ function switchTab(tabName) {
     view.classList.toggle('hidden', view.id !== `tab-${tabName}`);
   });
 
-  // Trigger tab-specific refresh if needed
   if (tabName === 'market') {
     loadMarketIndices();
   } else if (tabName === 'investments') {
@@ -84,6 +72,13 @@ async function loadOverview() {
     const res = await fetch('/api/overview');
     const data = await res.json();
     STATE.overview = data;
+    STATE.profileConfigured = data.profile_configured;
+
+    // If profile is not configured yet, launch onboarding questionnaire!
+    if (!data.profile_configured) {
+      openOnboardingModal();
+    }
+
     renderOverviewUI(data);
   } catch (err) {
     console.error('Failed to load overview:', err);
@@ -154,33 +149,25 @@ function renderOverviewUI(data) {
   document.getElementById('stat-monthly-spend').textContent = formatMoney(data.current_period_spending);
   document.getElementById('stat-savings-forecast').textContent = formatMoney(data.forecast.current_monthly_avg_savings) + '/mo';
   
-  // Anomaly alert pill
   const anomBadge = document.getElementById('stat-anomaly-count');
   if (anomBadge) {
     anomBadge.textContent = `${data.anomaly_count} ANOMALIES DETECTED`;
-    if (data.anomaly_count > 0) {
-      anomBadge.className = 'badge-ndot badge-red';
-    } else {
-      anomBadge.className = 'badge-ndot badge-white';
-    }
+    anomBadge.className = data.anomaly_count > 0 ? 'badge-ndot badge-red' : 'badge-ndot badge-white';
   }
 
-  // Savings rate
   const savRateEl = document.getElementById('stat-savings-rate');
   if (savRateEl) {
     savRateEl.textContent = `${data.forecast.current_savings_rate_pct}%`;
   }
 
-  // Runway
   const runwayEl = document.getElementById('stat-runway');
   if (runwayEl) {
     runwayEl.textContent = `${data.forecast.emergency_runway_months} MO`;
   }
 
-  // Plaid pill
   const plaidPill = document.getElementById('header-plaid-status');
   if (plaidPill && data.plaid_status) {
-    plaidPill.textContent = `${data.plaid_status.institution_name.toUpperCase()} // SYNCED`;
+    plaidPill.textContent = `${data.plaid_status.institution_name.toUpperCase()} // ACTIVE`;
   }
 
   // 50/30/20 bars
@@ -196,8 +183,8 @@ function renderOverviewUI(data) {
     document.getElementById('val-savings').textContent = `${r.savings.pct}% (${formatMoney(r.savings.amount)})`;
   }
 
-  // Render overview chart
-  renderForecastChart('overviewForecastChart', data.forecast, STATE.currency === 'INR' ? '₹' : '$');
+  // Render overview chart in INR
+  renderForecastChart('overviewForecastChart', data.forecast, '₹');
 
   // Quick Recommendations list
   const recsContainer = document.getElementById('overview-recommendations');
@@ -225,7 +212,7 @@ function renderTransactionsTable(transactions) {
   if (!tbody) return;
 
   if (transactions.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-[#666]">No transactions loaded yet.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-[#666]">No transactions recorded yet. Complete onboarding or add a transaction above.</td></tr>`;
     return;
   }
 
@@ -233,7 +220,7 @@ function renderTransactionsTable(transactions) {
     const isAnom = tx.anomaly_analysis && tx.anomaly_analysis.is_anomaly;
     const severity = tx.anomaly_analysis ? tx.anomaly_analysis.severity : 'NORMAL';
     const isIncome = tx.category === 'Income & Deposits';
-    const dateFormatted = new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const dateFormatted = new Date(tx.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
 
     let anomBadge = '';
     if (isAnom) {
@@ -274,7 +261,7 @@ function renderAnomaliesRadar(transactions) {
   const anomalies = transactions.filter(t => t.anomaly_analysis && t.anomaly_analysis.is_anomaly);
 
   if (anomalies.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-[#666] font-mono">No spending anomalies flagged in recent transactions. Model baseline is healthy.</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-[#666] font-mono">No spending anomalies detected. All category transactions within baseline.</div>`;
     return;
   }
 
@@ -294,7 +281,7 @@ function renderAnomaliesRadar(transactions) {
         </div>
 
         <h4 class="font-semibold text-white text-sm mb-1">${tx.merchant}</h4>
-        <div class="text-xs font-mono text-[#777] mb-3">${tx.category} • ${new Date(tx.date).toLocaleDateString()}</div>
+        <div class="text-xs font-mono text-[#777] mb-3">${tx.category} • ${new Date(tx.date).toLocaleDateString('en-IN')}</div>
 
         <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222] mb-3">
           <div class="text-xs text-[#ddd] mb-1 font-mono">${anom.reasons.join(' ')}</div>
@@ -302,8 +289,8 @@ function renderAnomaliesRadar(transactions) {
         </div>
 
         <div class="flex items-center justify-between text-[11px] font-mono text-[#666]">
-          <span>AI Isolation Forest & MAD Verified</span>
-          <button onclick="alert('Transaction flagged for dispute with institution.')" class="btn-nothing text-[10px] py-1 px-3">
+          <span>AI Isolation Forest & Category MAD Verified</span>
+          <button onclick="alert('Transaction flagged for review with your bank.')" class="btn-nothing text-[10px] py-1 px-3">
             FLAG / DISPUTE
           </button>
         </div>
@@ -315,10 +302,8 @@ function renderAnomaliesRadar(transactions) {
 function renderBudgetUI(data) {
   if (!data) return;
 
-  // Breakdown chart
   renderCategoryChart('budgetCategoryChart', data.category_breakdown);
 
-  // Subscriptions list
   const subsList = document.getElementById('subscriptions-list');
   if (subsList && data.subscriptions) {
     document.getElementById('sub-monthly-total').textContent = formatMoney(data.subscriptions.monthly_total);
@@ -339,7 +324,6 @@ function renderBudgetUI(data) {
     `).join('');
   }
 
-  // Full Recommendations list
   const fullRecsContainer = document.getElementById('budget-full-recommendations');
   if (fullRecsContainer && data.recommendations) {
     fullRecsContainer.innerHTML = data.recommendations.map(r => `
@@ -393,14 +377,11 @@ function renderInvestmentsUI() {
   const data = isIndia ? STATE.indiaMarket : STATE.globalMap;
   if (!data) return;
 
-  // Toggle buttons visual state
   document.getElementById('btn-region-india').classList.toggle('active', isIndia);
   document.getElementById('btn-region-global').classList.toggle('active', !isIndia);
 
-  // Currency symbol
   const currSym = data.currency_symbol;
 
-  // Render SIPs
   const sipContainer = document.getElementById('sips-cards-grid');
   if (sipContainer && data.sips) {
     sipContainer.innerHTML = data.sips.map(sip => `
@@ -442,7 +423,6 @@ function renderInvestmentsUI() {
     `).join('');
   }
 
-  // Render Top Stocks
   const stocksContainer = document.getElementById('stocks-cards-grid');
   if (stocksContainer && data.stocks) {
     stocksContainer.innerHTML = data.stocks.map(st => {
@@ -487,9 +467,8 @@ function renderInvestmentsUI() {
 }
 
 function renderForecastUI(forecastData) {
-  renderForecastChart('mlDetailedForecastChart', forecastData, STATE.currency === 'INR' ? '₹' : '$');
+  renderForecastChart('mlDetailedForecastChart', forecastData, '₹');
 
-  // Populate scenario totals
   const sc = forecastData.scenarios_6_month;
   if (sc) {
     document.getElementById('sc-conservative-total').textContent = formatMoney(sc.conservative.total);
@@ -503,7 +482,6 @@ function renderForecastUI(forecastData) {
     document.getElementById('sc-optimized-extra').textContent = '+' + formatMoney(sc.wyvern_optimized.extra_accumulated);
   }
 
-  // Populate table
   const tbody = document.getElementById('ml-forecast-tbody');
   if (tbody && forecastData.projections) {
     tbody.innerHTML = forecastData.projections.map(p => `
@@ -577,7 +555,7 @@ async function testCategorize(customText = null) {
   }
 }
 
-// SIP Compound Calculator
+// SIP Compound Calculator (INR)
 async function calculateSIP() {
   haptics.playClick();
   const monthly = parseFloat(document.getElementById('sip-input-monthly').value) || 10000;
@@ -600,9 +578,9 @@ async function calculateSIP() {
 
     const currSym = STATE.investmentRegion === 'india' ? '₹' : '$';
 
-    document.getElementById('sip-out-invested').textContent = currSym + data.total_invested.toLocaleString('en-US');
-    document.getElementById('sip-out-returns').textContent = currSym + data.estimated_returns.toLocaleString('en-US');
-    document.getElementById('sip-out-total').textContent = currSym + data.total_value.toLocaleString('en-US');
+    document.getElementById('sip-out-invested').textContent = currSym + data.total_invested.toLocaleString('en-IN');
+    document.getElementById('sip-out-returns').textContent = currSym + data.estimated_returns.toLocaleString('en-IN');
+    document.getElementById('sip-out-total').textContent = currSym + data.total_value.toLocaleString('en-IN');
     document.getElementById('sip-out-multiplier').textContent = `${data.wealth_multiplier}x Growth`;
 
     renderSipGrowthChart('sipGrowthCanvas', data.yearly_breakdown, currSym);
@@ -619,6 +597,91 @@ function prefillSipCalculator(fundName, returnRate, minSip) {
   document.getElementById('sip-rate-val').textContent = `${returnRate}%`;
   calculateSIP();
   document.getElementById('sip-calculator-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Onboarding Questionnaire Modal (Takes Real User Figures)
+function openOnboardingModal() {
+  haptics.playClick();
+  const modal = document.getElementById('onboarding-modal');
+  if (modal) modal.classList.remove('hidden');
+
+  // If profile exists, prefill fields
+  if (STATE.overview && STATE.overview.profile_data) {
+    const p = STATE.overview.profile_data;
+    if (document.getElementById('ob-salary')) document.getElementById('ob-salary').value = p.monthly_salary || '';
+    if (document.getElementById('ob-secondary')) document.getElementById('ob-secondary').value = p.secondary_income || '';
+    if (document.getElementById('ob-savings')) document.getElementById('ob-savings').value = p.savings_balance || '';
+    if (document.getElementById('ob-investments')) document.getElementById('ob-investments').value = p.investment_balance || '';
+    if (document.getElementById('ob-debt')) document.getElementById('ob-debt').value = p.credit_debt || '';
+    if (document.getElementById('ob-sip')) document.getElementById('ob-sip').value = p.target_monthly_sip || '';
+
+    const cs = p.category_spending || {};
+    if (document.getElementById('ob-cat-food')) document.getElementById('ob-cat-food').value = cs['Food & Dining'] || '';
+    if (document.getElementById('ob-cat-bills')) document.getElementById('ob-cat-bills').value = cs['Bills & Utilities'] || '';
+    if (document.getElementById('ob-cat-transit')) document.getElementById('ob-cat-transit').value = cs['Transportation'] || '';
+    if (document.getElementById('ob-cat-subs')) document.getElementById('ob-cat-subs').value = cs['Subscriptions & Digital'] || '';
+    if (document.getElementById('ob-cat-shopping')) document.getElementById('ob-cat-shopping').value = cs['Shopping & Retail'] || '';
+    if (document.getElementById('ob-cat-health')) document.getElementById('ob-cat-health').value = cs['Health & Fitness'] || '';
+    if (document.getElementById('ob-cat-entertainment')) document.getElementById('ob-cat-entertainment').value = cs['Entertainment & Leisure'] || '';
+  }
+}
+
+function closeOnboardingModal() {
+  haptics.playClick();
+  const modal = document.getElementById('onboarding-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function submitOnboardingForm(e) {
+  e.preventDefault();
+  haptics.playClick();
+
+  const salary = parseFloat(document.getElementById('ob-salary').value) || 0;
+  const secondary = parseFloat(document.getElementById('ob-secondary').value) || 0;
+  const savings = parseFloat(document.getElementById('ob-savings').value) || 0;
+  const investments = parseFloat(document.getElementById('ob-investments').value) || 0;
+  const debt = parseFloat(document.getElementById('ob-debt').value) || 0;
+  const sip = parseFloat(document.getElementById('ob-sip').value) || 0;
+
+  const categorySpending = {
+    "Food & Dining": parseFloat(document.getElementById('ob-cat-food').value) || 0,
+    "Bills & Utilities": parseFloat(document.getElementById('ob-cat-bills').value) || 0,
+    "Transportation": parseFloat(document.getElementById('ob-cat-transit').value) || 0,
+    "Subscriptions & Digital": parseFloat(document.getElementById('ob-cat-subs').value) || 0,
+    "Shopping & Retail": parseFloat(document.getElementById('ob-cat-shopping').value) || 0,
+    "Health & Fitness": parseFloat(document.getElementById('ob-cat-health').value) || 0,
+    "Entertainment & Leisure": parseFloat(document.getElementById('ob-cat-entertainment').value) || 0
+  };
+
+  const payload = {
+    monthly_salary: salary,
+    secondary_income: secondary,
+    savings_balance: savings,
+    investment_balance: investments,
+    credit_debt: debt,
+    target_monthly_sip: sip,
+    category_spending: categorySpending,
+    primary_bank: "HDFC Bank Ltd (India)"
+  };
+
+  try {
+    const res = await fetch('/api/profile/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    haptics.playPop();
+    closeOnboardingModal();
+    alert('Wyvern FinTech OS successfully calibrated with your exact financial data!');
+
+    loadOverview();
+    loadTransactions();
+    loadBudget();
+    loadMLForecast();
+  } catch (err) {
+    alert(`Failed to save financial profile: ${err.message}`);
+  }
 }
 
 // Plaid Modal & Simulation
@@ -638,8 +701,8 @@ async function connectPlaidBank(bankName) {
   statusDiv.innerHTML = `
     <div class="p-4 rounded-xl bg-[#111] border border-[#333] text-center">
       <div class="glyph-indicator mb-2"></div>
-      <div class="text-xs font-mono text-white mb-1">Authenticating with ${bankName} Plaid Sandbox...</div>
-      <div class="text-[11px] font-mono text-[#888]">Exchanging public_token for access_token</div>
+      <div class="text-xs font-mono text-white mb-1">Authenticating with ${bankName} API Sandbox...</div>
+      <div class="text-[11px] font-mono text-[#888]">Exchanging credentials & verifying live balance in INR</div>
     </div>
   `;
 
@@ -659,7 +722,7 @@ async function connectPlaidBank(bankName) {
       statusDiv.innerHTML = `
         <div class="p-4 rounded-xl bg-[#111] border border-[#4ade80] text-center">
           <div class="text-xs font-mono text-[#4ade80] font-bold mb-1">✓ ${bankName} CONNECTED</div>
-          <div class="text-[11px] font-mono text-[#aaa]">Item ID: ${data.item_id} • Status: Active</div>
+          <div class="text-[11px] font-mono text-[#aaa]">Account Aggregator ID: ${data.item_id} • Status: Active</div>
         </div>
       `;
       loadOverview();
@@ -679,13 +742,13 @@ async function syncPlaidNow() {
   try {
     const res = await fetch('/api/plaid/sync', { method: 'POST' });
     const data = await res.json();
-    alert(`Plaid Sync Complete: ${data.synced_count} transactions verified and analyzed.`);
+    alert(`Fintech API Sync Complete: ${data.synced_count} transactions verified and analyzed in INR.`);
     loadOverview();
     loadTransactions();
   } catch (err) {
     alert(`Sync error: ${err.message}`);
   } finally {
-    if (btn) btn.textContent = 'SYNC PLAID API';
+    if (btn) btn.textContent = 'SYNC FINTECH API';
   }
 }
 
@@ -742,17 +805,7 @@ async function submitNewTransaction(e) {
 
 function applyRecommendation(recId) {
   haptics.playPop();
-  alert(`Wyvern AI: Recommendation [${recId}] activated! Budget allocations rebalanced in real time.`);
-}
-
-function toggleCurrency() {
-  haptics.playClick();
-  STATE.currency = STATE.currency === 'USD' ? 'INR' : 'USD';
-  const currBtn = document.getElementById('btn-currency-toggle');
-  if (currBtn) currBtn.textContent = STATE.currency === 'USD' ? '$ USD' : '₹ INR';
-  if (STATE.overview) renderOverviewUI(STATE.overview);
-  if (STATE.transactions) renderTransactionsTable(STATE.transactions);
-  if (STATE.budget) renderBudgetUI(STATE.budget);
+  alert(`Wyvern AI: Recommendation [${recId}] activated! Budget rebalanced in real time.`);
 }
 
 function toggleAudio() {
