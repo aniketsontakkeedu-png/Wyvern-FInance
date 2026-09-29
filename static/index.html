@@ -31,7 +31,7 @@
         </div>
         <div class="hidden sm:flex items-center gap-2 font-mono text-xs text-[#888] border-l border-[#262626] pl-4">
           <span class="glyph-indicator"></span>
-          <span id="header-plaid-status" class="uppercase">ACCOUNT AGGREGATOR // READY</span>
+          <span id="header-mission-badge" class="uppercase text-[#ff4d5a] font-bold">MISSION: GROW WEALTH</span>
         </div>
       </div>
 
@@ -65,7 +65,7 @@
       <div class="glyph-indicator mx-auto mb-3"></div>
       <h2 class="font-ndot text-xl text-white font-bold mb-2">INITIAL FINANCIAL CALIBRATION REQUIRED</h2>
       <p class="text-xs text-[#aaa] max-w-xl mx-auto mb-5 leading-relaxed">
-        Wyvern does not use pre-baked placeholder accounts. Please provide your real monthly earnings, net worth assets, investments, and category spending to calibrate your machine learning models and personal budgeting algorithms.
+        Wyvern operates on your real numbers and money goals (Grow Wealth, Increase Money, or Save Money). Please provide your figures to curate your dashboard, recommendations, and ML models.
       </p>
       <button onclick="openOnboardingModal()" class="btn-nothing btn-nothing-red text-xs py-2.5 px-6 font-bold tracking-wider">
         START FINANCIAL SETUP WIZARD (₹) →
@@ -103,6 +103,66 @@
     <!-- ========================================== -->
     <div id="tab-overview" class="tab-view space-y-6">
       
+      <!-- Mission & Goal Tracker Bento Hero Widget -->
+      <div id="goal-tracker-widget" class="bento-card relative overflow-hidden bg-gradient-to-r from-[#121212] via-[#161616] to-[#0d0d0d] border border-[#2b2b2b]">
+        <div class="dot-crosshair">MISSION-00</div>
+        
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="badge-ndot badge-red text-[11px]" id="goal-badge">MISSION: GROW WEALTH</span>
+              <span class="text-xs font-mono text-[#888]" id="goal-timeline-label">5-Year Horizon</span>
+            </div>
+            <h2 id="goal-title" class="font-ndot text-xl text-white font-bold tracking-wide">
+              GROW WEALTH // COMPOUNDING ALPHA
+            </h2>
+            <p id="goal-tagline" class="text-xs text-[#aaa] font-mono mt-0.5">
+              Long-Term Systematic Wealth Compounding & Step-Up Equity Portfolio
+            </p>
+          </div>
+
+          <!-- Quick Goal Switcher Pills -->
+          <div class="flex items-center gap-2 p-1 rounded-full bg-[#0a0a0a] border border-[#222] self-start lg:self-auto">
+            <button onclick="switchFinancialGoal('GROW_WEALTH')" id="pill-goal-GROW_WEALTH" class="nav-pill text-[11px] py-1 px-3">
+              🌱 GROW WEALTH
+            </button>
+            <button onclick="switchFinancialGoal('INCREASE_MONEY')" id="pill-goal-INCREASE_MONEY" class="nav-pill text-[11px] py-1 px-3">
+              ⚡ INCREASE MONEY
+            </button>
+            <button onclick="switchFinancialGoal('SAVE_MONEY')" id="pill-goal-SAVE_MONEY" class="nav-pill text-[11px] py-1 px-3">
+              🛡️ SAVE MONEY
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Metrics & Bar -->
+        <div class="p-4 rounded-2xl bg-[#0a0a0a] border border-[#202020] mb-3">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2 text-xs font-mono">
+            <div>
+              <span class="text-[#777]">Current Corpus Progress: </span>
+              <strong id="goal-current-corpus" class="text-white font-bold text-sm">₹0</strong>
+              <span class="text-[#666]"> of </span>
+              <strong id="goal-target-corpus" class="text-[#ff4d5a] font-bold text-sm">₹0</strong>
+            </div>
+            <div class="flex items-center gap-3">
+              <span id="goal-progress-pct" class="text-white font-bold font-ndot text-sm">0%</span>
+              <span id="goal-pacing-status" class="badge-ndot badge-white text-[10px]">PACING CALCULATED</span>
+            </div>
+          </div>
+
+          <div class="glyph-meter-container h-2.5">
+            <div id="goal-progress-bar" class="glyph-meter-fill red" style="width: 0%;"></div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t border-[#1a1a1a] text-[11px] font-mono text-[#888]">
+            <div>Required Run-Rate: <strong id="goal-required-monthly" class="text-white">₹0/mo</strong></div>
+            <div>Your Monthly Savings: <strong id="goal-actual-monthly" class="text-[#4ade80]">₹0/mo</strong></div>
+            <div>Asset Split: <strong id="goal-asset-split" class="text-[#ddd]">60% Equity / 40% Liquid</strong></div>
+          </div>
+        </div>
+
+      </div>
+
       <!-- Top Metrics Bento Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
@@ -188,16 +248,16 @@
           <div>
             <div class="flex items-center justify-between mb-3">
               <h3 class="font-ndot text-base text-white font-bold tracking-wide">50/30/20 HEALTH</h3>
-              <span class="badge-ndot badge-white text-[10px]">WYVERN BENCHMARK</span>
+              <span class="badge-ndot badge-white text-[10px]" id="goal-rule-benchmark">GOAL ALIGNED</span>
             </div>
-            <p class="text-xs text-[#888] mb-5 leading-relaxed">
-              Automated allocation breakdown against institutional wealth-building ratios.
+            <p class="text-xs text-[#888] mb-5 leading-relaxed" id="goal-rule-desc">
+              Allocation breakdown customized for your selected financial mission.
             </p>
 
             <!-- Needs Bar -->
             <div class="mb-4">
               <div class="flex items-center justify-between text-xs font-mono mb-1">
-                <span class="text-[#bbb]">Needs (Ideal: 50%)</span>
+                <span class="text-[#bbb]" id="label-needs">Needs</span>
                 <span id="val-needs" class="text-white font-bold">--%</span>
               </div>
               <div class="glyph-meter-container">
@@ -208,7 +268,7 @@
             <!-- Wants Bar -->
             <div class="mb-4">
               <div class="flex items-center justify-between text-xs font-mono mb-1">
-                <span class="text-[#bbb]">Wants (Ideal: 30%)</span>
+                <span class="text-[#bbb]" id="label-wants">Wants</span>
                 <span id="val-wants" class="text-[#ff4d5a] font-bold">--%</span>
               </div>
               <div class="glyph-meter-container">
@@ -219,7 +279,7 @@
             <!-- Savings Bar -->
             <div class="mb-4">
               <div class="flex items-center justify-between text-xs font-mono mb-1">
-                <span class="text-[#bbb]">Savings (Ideal: 20%)</span>
+                <span class="text-[#bbb]" id="label-savings">Savings / Investment</span>
                 <span id="val-savings" class="text-[#4ade80] font-bold">--%</span>
               </div>
               <div class="glyph-meter-container">
@@ -229,21 +289,21 @@
           </div>
 
           <div class="pt-4 border-t border-[#222] text-xs font-mono text-[#888] flex items-center justify-between">
-            <span>Actionable Lift: <strong class="text-white">+18%</strong></span>
+            <span>Mission Strategy: <strong id="goal-summary-action" class="text-white">Active</strong></span>
             <button onclick="switchTab('budget')" class="underline hover:text-white">Rebalance</button>
           </div>
         </div>
 
       </div>
 
-      <!-- Bottom Overview: High-Impact AI Recommendations -->
+      <!-- Bottom Overview: Goal-Curated AI Recommendations -->
       <div class="bento-card">
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
             <span class="glyph-indicator"></span>
-            <h3 class="font-ndot text-base text-white font-bold tracking-wide">PERSONALIZED BUDGETING RECOMMENDATIONS</h3>
+            <h3 class="font-ndot text-base text-white font-bold tracking-wide">CURATED BUDGETING RECOMMENDATIONS</h3>
           </div>
-          <span class="text-xs font-mono text-[#888]">TAILORED TO YOUR REAL FINANCIAL DATA</span>
+          <span class="text-xs font-mono text-[#888]" id="recs-goal-subtitle">ALIGNED TO YOUR MONEY GOAL</span>
         </div>
         
         <div id="overview-recommendations" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -683,7 +743,7 @@
             <span class="glyph-indicator"></span>
             <h3 class="font-ndot text-lg text-white font-bold tracking-wide">ALL PERSONALIZED RECOMMENDATIONS</h3>
           </div>
-          <span class="text-xs font-mono text-[#777]">RANKED BY FINANCIAL ROI (₹)</span>
+          <span class="text-xs font-mono text-[#777]" id="budget-goal-subtitle">RANKED BY GOAL ROI (₹)</span>
         </div>
 
         <div id="budget-full-recommendations" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -696,19 +756,19 @@
   </main>
 
   <!-- ============================================================== -->
-  <!-- MODAL: ONBOARDING FINANCIAL QUESTIONNAIRE (USER REAL INPUTS)  -->
+  <!-- MODAL: ONBOARDING FINANCIAL QUESTIONNAIRE WITH GOALS           -->
   <!-- ============================================================== -->
   <div id="onboarding-modal" class="nothing-modal-backdrop hidden">
     <div class="nothing-modal max-w-2xl max-h-[92vh] overflow-y-auto pr-2">
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-2">
           <span class="glyph-indicator"></span>
-          <h3 class="font-ndot text-xl text-white font-bold">FINANCIAL INTAKE & PROFILE CALIBRATION</h3>
+          <h3 class="font-ndot text-xl text-white font-bold">FINANCIAL INTAKE & MISSION CALIBRATION</h3>
         </div>
         <button onclick="closeOnboardingModal()" class="text-[#777] hover:text-white font-mono text-sm">✕</button>
       </div>
       <p class="text-xs text-[#aaa] mb-4 leading-relaxed font-mono">
-        Enter your actual numbers below. Wyvern uses your exact figures to calculate Net Worth, model category allocations, and forecast savings.
+        Enter your real figures and select your primary financial mission. Wyvern curates the entire platform and algorithms accordingly.
       </p>
 
       <!-- Live Dynamic Calculation Pill Bar -->
@@ -729,11 +789,72 @@
 
       <form onsubmit="submitOnboardingForm(event)" class="space-y-5">
         
-        <!-- Section 1: Earnings & Inflows -->
+        <!-- Section 1: Money Goal Selection -->
         <div class="p-4 rounded-2xl bg-[#0d0d0d] border border-[#242424]">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
-              <span class="badge-ndot badge-white text-[10px]">STEP 01</span>
+              <span class="badge-ndot badge-red text-[10px]">STEP 01</span>
+              <h4 class="font-ndot text-sm text-white font-bold">SELECT YOUR MONEY GOAL</h4>
+            </div>
+            <span class="text-[11px] font-mono text-[#666]">Platform Strategy</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+            <!-- Goal 1: Grow Wealth -->
+            <label class="cursor-pointer">
+              <input type="radio" name="ob-goal" value="GROW_WEALTH" checked class="hidden peer" onchange="selectGoalCard(this.value)">
+              <div class="p-3.5 rounded-xl bg-[#121212] border border-[#282828] peer-checked:border-[#ffffff] peer-checked:bg-[#1a1a1a] transition-all h-full flex flex-col justify-between">
+                <div>
+                  <div class="font-ndot text-xs font-bold text-white mb-1">🌱 GROW WEALTH</div>
+                  <p class="text-[11px] text-[#888] leading-tight mb-2">Long-term systematic compounding & step-up SIPs.</p>
+                </div>
+                <div class="text-[10px] font-mono text-[#4ade80]">Focus: 10-20Y Alpha</div>
+              </div>
+            </label>
+
+            <!-- Goal 2: Increase Money -->
+            <label class="cursor-pointer">
+              <input type="radio" name="ob-goal" value="INCREASE_MONEY" class="hidden peer" onchange="selectGoalCard(this.value)">
+              <div class="p-3.5 rounded-xl bg-[#121212] border border-[#282828] peer-checked:border-[#ff4d5a] peer-checked:bg-[#1a1a1a] transition-all h-full flex flex-col justify-between">
+                <div>
+                  <div class="font-ndot text-xs font-bold text-white mb-1">⚡ INCREASE MONEY</div>
+                  <p class="text-[11px] text-[#888] leading-tight mb-2">Aggressive growth, momentum equities & high cashflow.</p>
+                </div>
+                <div class="text-[10px] font-mono text-[#ff4d5a]">Focus: Capital Growth</div>
+              </div>
+            </label>
+
+            <!-- Goal 3: Save Money -->
+            <label class="cursor-pointer">
+              <input type="radio" name="ob-goal" value="SAVE_MONEY" class="hidden peer" onchange="selectGoalCard(this.value)">
+              <div class="p-3.5 rounded-xl bg-[#121212] border border-[#282828] peer-checked:border-[#ffffff] peer-checked:bg-[#1a1a1a] transition-all h-full flex flex-col justify-between">
+                <div>
+                  <div class="font-ndot text-xs font-bold text-white mb-1">🛡️ SAVE MONEY</div>
+                  <p class="text-[11px] text-[#888] leading-tight mb-2">Capital preservation, expense cut & emergency cushion.</p>
+                </div>
+                <div class="text-[10px] font-mono text-[#60a5fa]">Focus: Expense Pruning</div>
+              </div>
+            </label>
+          </div>
+
+          <!-- Target Amount & Timeline -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#1c1c1c]">
+            <div>
+              <label class="block text-xs font-mono text-[#888] mb-1">Target Corpus Goal (₹)</label>
+              <input id="ob-target-amount" type="number" step="10000" placeholder="₹ 25,00,000" class="nothing-input">
+            </div>
+            <div>
+              <label class="block text-xs font-mono text-[#888] mb-1">Target Timeline (Years)</label>
+              <input id="ob-target-timeline" type="number" step="1" min="1" max="30" value="5" placeholder="5" class="nothing-input">
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Earnings & Inflows -->
+        <div class="p-4 rounded-2xl bg-[#0d0d0d] border border-[#242424]">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="badge-ndot badge-white text-[10px]">STEP 02</span>
               <h4 class="font-ndot text-sm text-white font-bold">MONTHLY EARNINGS & INFLOWS (₹)</h4>
             </div>
             <span class="text-[11px] font-mono text-[#666]">Take-Home Income</span>
@@ -750,11 +871,11 @@
           </div>
         </div>
 
-        <!-- Section 2: Net Worth, Assets & Debt -->
+        <!-- Section 3: Net Worth, Assets & Debt -->
         <div class="p-4 rounded-2xl bg-[#0d0d0d] border border-[#242424]">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
-              <span class="badge-ndot badge-white text-[10px]">STEP 02</span>
+              <span class="badge-ndot badge-white text-[10px]">STEP 03</span>
               <h4 class="font-ndot text-sm text-white font-bold">NET WORTH, ASSETS & DEBT (₹)</h4>
             </div>
             <span class="text-[11px] font-mono text-[#666]">Balance Sheet</span>
@@ -779,11 +900,11 @@
           </div>
         </div>
 
-        <!-- Section 3: Monthly Spending by Category -->
+        <!-- Section 4: Monthly Spending by Category -->
         <div class="p-4 rounded-2xl bg-[#0d0d0d] border border-[#242424]">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
-              <span class="badge-ndot badge-red text-[10px]">STEP 03</span>
+              <span class="badge-ndot badge-red text-[10px]">STEP 04</span>
               <h4 class="font-ndot text-sm text-white font-bold">MONTHLY SPENDING ALLOCATIONS BY CATEGORY (₹)</h4>
             </div>
             <span class="text-[11px] font-mono text-[#666]">Category Budgets</span>

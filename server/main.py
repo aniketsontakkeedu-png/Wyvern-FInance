@@ -1,5 +1,5 @@
 """
-Wyvern Fintech OS - Main FastAPI Backend Application (INR Edition)
+Wyvern Fintech OS - Main FastAPI Backend Application (Goal-Curated Edition)
 """
 import os
 from typing import Dict, Any, List, Optional
@@ -17,8 +17,8 @@ from .plaid_service import plaid_service
 
 app = FastAPI(
     title="Wyvern Fintech OS",
-    description="Intelligent financial operating system in Indian Rupees (₹) with real user profile ingestion, ML spending categorization, anomaly detection, savings forecasting, Plaid/Account Aggregator integration, and India & Global investment intelligence.",
-    version="2.0.0"
+    description="Intelligent financial operating system in Indian Rupees (₹) with real user profile ingestion, dynamic Money Goals curation (Grow Wealth, Increase Money, Save Money), ML spending categorization, anomaly detection, savings forecasting, and India & Global investment intelligence.",
+    version="2.1.0"
 )
 
 app.add_middleware(
@@ -37,8 +37,16 @@ class UserProfileSetupRequest(BaseModel):
     investment_balance: float
     credit_debt: Optional[float] = 0.0
     target_monthly_sip: Optional[float] = 0.0
+    financial_goal: Optional[str] = "GROW_WEALTH"
+    target_goal_amount: Optional[float] = 0.0
+    target_goal_timeline_years: Optional[int] = 5
     category_spending: Dict[str, float]
     primary_bank: Optional[str] = "HDFC Bank Ltd"
+
+class GoalSwitchRequest(BaseModel):
+    financial_goal: str
+    target_goal_amount: Optional[float] = None
+    target_goal_timeline_years: Optional[int] = None
 
 class CategorizeRequest(BaseModel):
     description: str
@@ -69,14 +77,38 @@ def health_check():
 def get_profile():
     return {
         "profile_configured": store.profile_configured,
-        "profile_data": store.profile_data
+        "profile_data": store.profile_data,
+        "financial_goal": store.financial_goal
     }
 
 @app.post("/api/profile/setup")
 def setup_profile(req: UserProfileSetupRequest):
-    """Configures Wyvern with real user earnings, spending by category, and asset balances."""
+    """Configures Wyvern with real user earnings, spending by category, asset balances, and money goal."""
     res = store.setup_user_profile(req.model_dump())
     return {"status": "success", "summary": res}
+
+@app.post("/api/profile/goal")
+def switch_goal(req: GoalSwitchRequest):
+    """Dynamically updates the money goal and re-curates the entire platform."""
+    if not store.profile_configured:
+        raise HTTPException(status_code=400, detail="Profile not configured yet")
+    store.financial_goal = req.financial_goal.upper()
+    if req.target_goal_amount is not None and req.target_goal_amount > 0:
+        store.target_goal_amount = req.target_goal_amount
+    if req.target_goal_timeline_years is not None and req.target_goal_timeline_years > 0:
+        store.target_goal_timeline_years = req.target_goal_timeline_years
+    store.profile_data["financial_goal"] = store.financial_goal
+    store.profile_data["target_goal_amount"] = store.target_goal_amount
+    store.profile_data["target_goal_timeline_years"] = store.target_goal_timeline_years
+    # Persist updated goal
+    try:
+        from .data_store import PROFILE_FILE
+        import json
+        with open(PROFILE_FILE, "w", encoding="utf-8") as f:
+            json.dump(store.profile_data, f, indent=2)
+    except:
+        pass
+    return {"status": "success", "financial_goal": store.financial_goal, "summary": store.get_summary_stats()}
 
 @app.post("/api/profile/reset")
 def reset_profile():
@@ -86,10 +118,10 @@ def reset_profile():
 
 @app.get("/api/overview")
 def get_overview():
-    """Provides high-level dashboard metrics, net worth, forecast snapshot, and anomaly alerts in INR."""
+    """Provides high-level dashboard metrics, net worth, forecast snapshot, anomaly alerts, and goal metrics."""
     summary = store.get_summary_stats()
     accounts = store.get_accounts()
-    budget = budget_engine.analyze_budget(store.get_transactions(), accounts)
+    budget = budget_engine.analyze_budget(store.get_transactions(), accounts, goal=store.financial_goal)
     return {
         **summary,
         "accounts": accounts,
@@ -100,30 +132,25 @@ def get_overview():
 
 @app.get("/api/transactions")
 def get_transactions(limit: int = 50):
-    """Returns list of user transactions augmented with ML category and anomaly diagnosis."""
     return store.get_transactions(limit=limit)
 
 @app.post("/api/transactions")
 def add_transaction(req: TransactionCreateRequest):
-    """Adds a new real transaction, processes it through ML models, and saves it."""
     tx = store.add_transaction(req.model_dump())
     return {"status": "success", "transaction": tx}
 
 @app.post("/api/ml/categorize")
 def ml_categorize(req: CategorizeRequest):
-    """Runs the spending categorizer model on any raw transaction narrative."""
     result = categorizer.predict(req.description)
     return result
 
 @app.get("/api/ml/forecast")
 def ml_forecast(horizon: int = 6):
-    """Calculates ML savings forecast, confidence bounds, and scenario simulations based on user profile."""
     history = store.get_monthly_history()
     return forecaster.forecast(history, horizon_months=horizon)
 
 @app.get("/api/ml/anomalies")
 def ml_anomalies():
-    """Returns all transactions with detected anomalies and severity scoring."""
     txs = store.get_transactions(limit=100)
     anomalies = [t for t in txs if t.get("anomaly_analysis", {}).get("is_anomaly")]
     return {
@@ -133,29 +160,24 @@ def ml_anomalies():
 
 @app.get("/api/budget")
 def get_budget_analysis():
-    """Returns comprehensive budget breakdown, 50/30/20 metrics, subscription audits, and personalized tips."""
     txs = store.get_transactions(limit=100)
     accs = store.get_accounts()
-    return budget_engine.analyze_budget(txs, accs)
+    return budget_engine.analyze_budget(txs, accs, goal=store.financial_goal)
 
 @app.get("/api/market/indices")
 def get_market_indices():
-    """Fetches live stock market index feeds (India & Global)."""
     return market_service.get_indices()
 
 @app.get("/api/market/india")
 def get_india_market():
-    """Returns India specific top performing SIPs and stocks with live quotes."""
     return market_service.get_india_recommendations()
 
 @app.get("/api/market/global")
 def get_global_market():
-    """Returns Global specific top performing SIPs/ETFs and stocks with live quotes."""
     return market_service.get_global_recommendations()
 
 @app.post("/api/calculator/sip")
 def calculate_sip(req: SipCalculateRequest):
-    """Calculates monthly compound growth for SIP investments with step-up in INR."""
     return market_service.calculate_sip(
         monthly_investment=req.monthly_investment,
         annual_return_pct=req.annual_return_pct,

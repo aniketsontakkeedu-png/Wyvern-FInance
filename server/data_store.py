@@ -1,6 +1,9 @@
 """
 Wyvern Data Store: User Profile State, Transactions Repository, and INR Financial Ledger
-Supports interactive user onboarding questionnaire, dynamic profile recalibration, and persistence.
+Supports interactive user onboarding questionnaire with dynamic Money Goals curation:
+- GROW_WEALTH (Long-Term Compounding & Step-Up SIPs)
+- INCREASE_MONEY (Aggressive Capital Growth & High-Alpha Equities)
+- SAVE_MONEY (Capital Preservation, Expense Trimming & Emergency Runway)
 """
 import os
 import json
@@ -15,6 +18,9 @@ class DataStore:
     def __init__(self):
         self.profile_configured = False
         self.profile_data: Dict[str, Any] = {}
+        self.financial_goal = "GROW_WEALTH" # "GROW_WEALTH" | "INCREASE_MONEY" | "SAVE_MONEY"
+        self.target_goal_amount = 0.0
+        self.target_goal_timeline_years = 5
         self.accounts: List[Dict[str, Any]] = []
         self.transactions: List[Dict[str, Any]] = []
         self.monthly_history: List[Dict[str, Any]] = []
@@ -39,9 +45,12 @@ class DataStore:
             except Exception as e:
                 print(f"Error loading saved profile: {e}")
 
-        # Fresh unconfigured state - requires user input via onboarding questionnaire
+        # Fresh unconfigured state
         self.profile_configured = False
         self.profile_data = {}
+        self.financial_goal = "GROW_WEALTH"
+        self.target_goal_amount = 0.0
+        self.target_goal_timeline_years = 5
         self.accounts = [
             {
                 "id": "acc_sav_01",
@@ -83,7 +92,7 @@ class DataStore:
 
     def setup_user_profile(self, profile: Dict[str, Any], persist: bool = True):
         """
-        Takes real user inputs from onboarding questionnaire and builds financial profile in INR (₹).
+        Takes real user inputs from onboarding questionnaire including money goals and builds profile.
         """
         salary = float(profile.get("monthly_salary", 0.0))
         secondary = float(profile.get("secondary_income", 0.0))
@@ -94,10 +103,28 @@ class DataStore:
         debt_bal = float(profile.get("credit_debt", 0.0))
         target_sip = float(profile.get("target_monthly_sip", 0.0))
 
+        # Money Goal Configuration
+        self.financial_goal = profile.get("financial_goal", "GROW_WEALTH").upper()
+        if self.financial_goal not in ["GROW_WEALTH", "INCREASE_MONEY", "SAVE_MONEY"]:
+            self.financial_goal = "GROW_WEALTH"
+
+        self.target_goal_amount = float(profile.get("target_goal_amount", 0.0))
+        if self.target_goal_amount <= 0:
+            # Smart default target based on goal and current net worth
+            curr_nw = savings_bal + invest_bal - debt_bal
+            if self.financial_goal == "GROW_WEALTH":
+                self.target_goal_amount = max(2500000.0, curr_nw * 2.5)
+            elif self.financial_goal == "INCREASE_MONEY":
+                self.target_goal_amount = max(5000000.0, curr_nw * 3.5)
+            else: # SAVE_MONEY
+                self.target_goal_amount = max(1000000.0, curr_nw * 1.5)
+
+        self.target_goal_timeline_years = int(profile.get("target_goal_timeline_years", 5))
+
         cat_spend = profile.get("category_spending", {})
         total_expense = sum(float(v) for v in cat_spend.values())
 
-        # Update accounts with user's real numbers
+        # Update accounts
         self.accounts = [
             {
                 "id": "acc_sav_01",
@@ -153,7 +180,7 @@ class DataStore:
                 "currency": "INR"
             })
 
-        # 2. SIP Investment if specified
+        # 2. SIP Investment
         if target_sip > 0:
             tx_list.append({
                 "id": f"tx_sip_{now.strftime('%Y%m%d')}_02",
@@ -167,7 +194,7 @@ class DataStore:
                 "currency": "INR"
             })
 
-        # 3. Category spending distribution matching user's exact input
+        # 3. Category spending distribution
         merchant_map = {
             "Food & Dining": [("Swiggy / Zomato Online Orders", 0.45), ("Supermarket & Grocery Delivery", 0.55)],
             "Bills & Utilities": [("Electricity & Broadband Bill Payment", 0.3), ("House Rent & Maintenance", 0.7)],
@@ -201,8 +228,7 @@ class DataStore:
 
         self.transactions = tx_list
 
-        # Historical monthly trend for forecasting based on user's real numbers
-        monthly_net = total_income - total_expense - target_sip
+        # Historical monthly trend tailored to goal
         self.monthly_history = []
         for i in range(5, -1, -1):
             m_date = now - timedelta(days=30 * i)
@@ -233,7 +259,6 @@ class DataStore:
         return self.get_summary_stats()
 
     def reset_profile(self):
-        """Clears user profile and prompts onboarding wizard."""
         if os.path.exists(PROFILE_FILE):
             try:
                 os.remove(PROFILE_FILE)
@@ -293,11 +318,71 @@ class DataStore:
     def get_monthly_history(self) -> List[Dict[str, Any]]:
         return self.monthly_history
 
+    def get_goal_metrics(self, net_worth: float, monthly_savings: float) -> Dict[str, Any]:
+        """Calculates progress and pacing metrics for the user's specific money goal."""
+        goal = self.financial_goal
+        target = self.target_goal_amount
+        timeline_yrs = self.target_goal_timeline_years
+        total_months = max(12, timeline_yrs * 12)
+
+        # Baseline progress
+        progress_val = max(0.0, net_worth)
+        progress_pct = round(min(100.0, (progress_val / target * 100.0)), 1) if target > 0 else 0.0
+        remaining_corpus = max(0.0, target - progress_val)
+
+        # Required monthly savings pacing
+        required_monthly = round(remaining_corpus / total_months, 2) if total_months > 0 else 0.0
+
+        goal_meta = {
+            "GROW_WEALTH": {
+                "title": "GROW WEALTH // COMPOUNDING ALPHA",
+                "tagline": "Long-Term Systematic Wealth Compounding & Step-Up Equity Portfolio",
+                "focus_areas": ["Top-Quartile Mutual Fund SIPs", "Annual Step-Up Disciplined Compounding", "Diversified Global Index Hedges"],
+                "recommended_asset_split": "60% Equity SIPs / 25% Liquid Reserves / 15% Thematic Growth",
+                "curated_badge": "MISSION: GROW WEALTH"
+            },
+            "INCREASE_MONEY": {
+                "title": "INCREASE MONEY // AGGRESSIVE CASHFLOW & GROWTH",
+                "tagline": "Maximizing Income Velocity, Momentum Equities & High-Growth Opportunities",
+                "focus_areas": ["High-Alpha Growth Equities", "Income Velocity Scaling", "High-Beta Sectoral Expansion"],
+                "recommended_asset_split": "75% High-Growth Equities / 15% Swing Allocation / 10% Cash",
+                "curated_badge": "MISSION: INCREASE MONEY"
+            },
+            "SAVE_MONEY": {
+                "title": "SAVE MONEY // CAPITAL PRESERVATION & LEAK TRIMMING",
+                "tagline": "Aggressive Expense Reduction, 12-Month Emergency Vault & Zero Debt",
+                "focus_areas": ["Discretionary Outflow Lockdown", "Subscription Creep Eradication", "High-Yield Arbitrage & Liquid Parking"],
+                "recommended_asset_split": "50% High-Yield Liquid Vaults / 30% Debt Elimination / 20% Safe Debt Index",
+                "curated_badge": "MISSION: SAVE MONEY"
+            }
+        }.get(goal, {
+            "title": "GROW WEALTH // COMPOUNDING ALPHA",
+            "tagline": "Long-Term Systematic Wealth Compounding",
+            "focus_areas": ["Equity SIPs", "Index Hedges"],
+            "recommended_asset_split": "60% Equity / 40% Liquid",
+            "curated_badge": "MISSION: GROW WEALTH"
+        })
+
+        return {
+            "goal": goal,
+            "target_amount": round(target, 2),
+            "timeline_years": timeline_yrs,
+            "current_progress_amount": round(progress_val, 2),
+            "progress_pct": progress_pct,
+            "remaining_amount": round(remaining_corpus, 2),
+            "required_monthly_savings": required_monthly,
+            "current_monthly_savings": round(monthly_savings, 2),
+            "is_on_track": monthly_savings >= required_monthly,
+            "velocity_ratio": round((monthly_savings / required_monthly * 100), 1) if required_monthly > 0 else 100.0,
+            **goal_meta
+        }
+
     def get_summary_stats(self) -> Dict[str, Any]:
         if not self.profile_configured:
             return {
                 "profile_configured": False,
                 "profile_data": {},
+                "financial_goal": "GROW_WEALTH",
                 "currency": "INR",
                 "currency_symbol": "₹",
                 "net_worth": 0.0,
@@ -306,6 +391,7 @@ class DataStore:
                 "current_period_spending": 0.0,
                 "anomaly_count": 0,
                 "anomalies": [],
+                "goal_metrics": None,
                 "forecast": {
                     "current_monthly_avg_savings": 0.0,
                     "current_monthly_avg_spending": 0.0,
@@ -333,9 +419,13 @@ class DataStore:
 
         forecast_data = forecaster.forecast(self.monthly_history, horizon_months=6)
 
+        current_savings = forecast_data.get("current_monthly_avg_savings", 0.0)
+        goal_metrics = self.get_goal_metrics(net_worth, current_savings)
+
         return {
             "profile_configured": True,
             "profile_data": self.profile_data,
+            "financial_goal": self.financial_goal,
             "currency": "INR",
             "currency_symbol": "₹",
             "net_worth": round(net_worth, 2),
@@ -344,6 +434,7 @@ class DataStore:
             "current_period_spending": round(current_spending, 2),
             "anomaly_count": len(anomalies),
             "anomalies": anomalies[:5],
+            "goal_metrics": goal_metrics,
             "forecast": forecast_data,
             "plaid_status": self.plaid_status
         }

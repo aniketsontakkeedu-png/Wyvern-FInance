@@ -1,5 +1,5 @@
 /**
- * Wyvern Fintech OS - Main Frontend Application Logic (INR Edition)
+ * Wyvern Fintech OS - Main Frontend Application Logic (Goal-Curated INR Edition)
  */
 
 const STATE = {
@@ -14,7 +14,8 @@ const STATE = {
   investmentRegion: 'india', // 'india' or 'global'
   forecastHorizon: 6,
   audioMuted: false,
-  profileConfigured: false
+  profileConfigured: false,
+  selectedGoal: 'GROW_WEALTH'
 };
 
 // Formatting utilities in Indian Rupees (₹)
@@ -66,6 +67,31 @@ function switchTab(tabName) {
   }
 }
 
+// Goal Switching from Overview Pill Bar
+async function switchFinancialGoal(newGoal) {
+  haptics.playPop();
+  STATE.selectedGoal = newGoal;
+
+  try {
+    const res = await fetch('/api/profile/goal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ financial_goal: newGoal })
+    });
+    const data = await res.json();
+    loadOverview();
+    loadBudget();
+  } catch (err) {
+    console.error('Goal switch error:', err);
+  }
+}
+
+function selectGoalCard(goalVal) {
+  haptics.playClick();
+  STATE.selectedGoal = goalVal;
+  updateLiveCalculations();
+}
+
 // Live calculation preview in the Onboarding Form
 function updateLiveCalculations() {
   const salary = parseFloat(document.getElementById('ob-salary')?.value) || 0;
@@ -104,11 +130,11 @@ async function loadOverview() {
     const data = await res.json();
     STATE.overview = data;
     STATE.profileConfigured = data.profile_configured;
+    STATE.selectedGoal = data.financial_goal || 'GROW_WEALTH';
 
     const banner = document.getElementById('unconfigured-banner');
     if (!data.profile_configured) {
       if (banner) banner.classList.remove('hidden');
-      // Automatically prompt the user to input their figures right at the start
       openOnboardingModal();
     } else {
       if (banner) banner.classList.add('hidden');
@@ -202,22 +228,65 @@ function renderOverviewUI(data) {
     runwayEl.textContent = isConfigured ? `${data.forecast.emergency_runway_months} MO` : '-- MO';
   }
 
-  const plaidPill = document.getElementById('header-plaid-status');
-  if (plaidPill && data.plaid_status) {
-    plaidPill.textContent = isConfigured ? `${data.plaid_status.institution_name.toUpperCase()} // ACTIVE` : 'ACCOUNT AGGREGATOR // READY';
+  // Header mission badge
+  const headerMission = document.getElementById('header-mission-badge');
+  if (headerMission) {
+    const g = data.financial_goal || 'GROW_WEALTH';
+    const labelMap = {
+      'GROW_WEALTH': 'MISSION: GROW WEALTH 🌱',
+      'INCREASE_MONEY': 'MISSION: INCREASE MONEY ⚡',
+      'SAVE_MONEY': 'MISSION: SAVE MONEY 🛡️'
+    };
+    headerMission.textContent = labelMap[g] || 'MISSION: GROW WEALTH';
   }
 
-  // 50/30/20 bars
+  // Render Goal Tracker Hero Widget
+  const gm = data.goal_metrics;
+  if (gm && isConfigured) {
+    document.getElementById('goal-badge').textContent = gm.curated_badge;
+    document.getElementById('goal-title').textContent = gm.title;
+    document.getElementById('goal-tagline').textContent = gm.tagline;
+    document.getElementById('goal-timeline-label').textContent = `${gm.timeline_years}-Year Horizon`;
+    document.getElementById('goal-current-corpus').textContent = formatMoney(gm.current_progress_amount);
+    document.getElementById('goal-target-corpus').textContent = formatMoney(gm.target_amount);
+    document.getElementById('goal-progress-pct').textContent = `${gm.progress_pct}%`;
+    document.getElementById('goal-progress-bar').style.width = `${Math.min(100, gm.progress_pct)}%`;
+
+    document.getElementById('goal-required-monthly').textContent = `${formatMoney(gm.required_monthly_savings)}/mo`;
+    document.getElementById('goal-actual-monthly').textContent = `${formatMoney(gm.current_monthly_savings)}/mo`;
+    document.getElementById('goal-asset-split').textContent = gm.recommended_asset_split;
+
+    const pacingBadge = document.getElementById('goal-pacing-status');
+    if (pacingBadge) {
+      if (gm.is_on_track) {
+        pacingBadge.textContent = `✓ ON TRACK (${gm.velocity_ratio}% VELOCITY)`;
+        pacingBadge.className = 'badge-ndot badge-white text-[10px] text-[#4ade80]';
+      } else {
+        pacingBadge.textContent = `PACING BEHIND (${gm.velocity_ratio}%)`;
+        pacingBadge.className = 'badge-ndot badge-red text-[10px]';
+      }
+    }
+
+    // Update goal switcher pills active state
+    ['GROW_WEALTH', 'INCREASE_MONEY', 'SAVE_MONEY'].forEach(g => {
+      const pill = document.getElementById(`pill-goal-${g}`);
+      if (pill) {
+        pill.classList.toggle('active', g === gm.goal);
+      }
+    });
+  }
+
+  // 50/30/20 bars tailored to goal
   const r = data.rule_50_30_20;
   if (r && isConfigured) {
     document.getElementById('bar-needs').style.width = `${Math.min(100, r.needs.pct)}%`;
-    document.getElementById('val-needs').textContent = `${r.needs.pct}% (${formatMoney(r.needs.amount)})`;
+    document.getElementById('val-needs').textContent = `${r.needs.pct}% (Target: ${r.needs.ideal_pct}%)`;
 
     document.getElementById('bar-wants').style.width = `${Math.min(100, r.wants.pct)}%`;
-    document.getElementById('val-wants').textContent = `${r.wants.pct}% (${formatMoney(r.wants.amount)})`;
+    document.getElementById('val-wants').textContent = `${r.wants.pct}% (Target: ${r.wants.ideal_pct}%)`;
 
     document.getElementById('bar-savings').style.width = `${Math.min(100, r.savings.pct)}%`;
-    document.getElementById('val-savings').textContent = `${r.savings.pct}% (${formatMoney(r.savings.amount)})`;
+    document.getElementById('val-savings').textContent = `${r.savings.pct}% (Target: ${r.savings.ideal_pct}%)`;
   }
 
   // Render overview chart in INR if configured
@@ -661,13 +730,12 @@ function prefillSipCalculator(fundName, returnRate, minSip) {
   document.getElementById('sip-calculator-section').scrollIntoView({ behavior: 'smooth' });
 }
 
-// Onboarding Questionnaire Modal (Takes Real User Figures)
+// Onboarding Questionnaire Modal (Takes Real User Figures + Money Goals)
 function openOnboardingModal() {
   haptics.playClick();
   const modal = document.getElementById('onboarding-modal');
   if (modal) modal.classList.remove('hidden');
 
-  // If user profile was saved, prefill existing numbers for easy editing
   if (STATE.overview && STATE.overview.profile_data && STATE.overview.profile_configured) {
     const p = STATE.overview.profile_data;
     if (document.getElementById('ob-salary')) document.getElementById('ob-salary').value = p.monthly_salary || '';
@@ -676,6 +744,16 @@ function openOnboardingModal() {
     if (document.getElementById('ob-investments')) document.getElementById('ob-investments').value = p.investment_balance || '';
     if (document.getElementById('ob-debt')) document.getElementById('ob-debt').value = p.credit_debt || '';
     if (document.getElementById('ob-sip')) document.getElementById('ob-sip').value = p.target_monthly_sip || '';
+
+    if (document.getElementById('ob-target-amount')) document.getElementById('ob-target-amount').value = p.target_goal_amount || '';
+    if (document.getElementById('ob-target-timeline')) document.getElementById('ob-target-timeline').value = p.target_goal_timeline_years || 5;
+
+    const g = p.financial_goal || 'GROW_WEALTH';
+    const radio = document.querySelector(`input[name="ob-goal"][value="${g}"]`);
+    if (radio) {
+      radio.checked = true;
+      selectGoalCard(g);
+    }
 
     const cs = p.category_spending || {};
     if (document.getElementById('ob-cat-food')) document.getElementById('ob-cat-food').value = cs['Food & Dining'] || '';
@@ -706,6 +784,11 @@ async function submitOnboardingForm(e) {
   const debt = parseFloat(document.getElementById('ob-debt').value) || 0;
   const sip = parseFloat(document.getElementById('ob-sip').value) || 0;
 
+  const goalRadio = document.querySelector('input[name="ob-goal"]:checked');
+  const financialGoal = goalRadio ? goalRadio.value : 'GROW_WEALTH';
+  const targetAmount = parseFloat(document.getElementById('ob-target-amount').value) || 0;
+  const targetTimeline = parseInt(document.getElementById('ob-target-timeline').value) || 5;
+
   const categorySpending = {
     "Food & Dining": parseFloat(document.getElementById('ob-cat-food').value) || 0,
     "Bills & Utilities": parseFloat(document.getElementById('ob-cat-bills').value) || 0,
@@ -723,6 +806,9 @@ async function submitOnboardingForm(e) {
     investment_balance: investments,
     credit_debt: debt,
     target_monthly_sip: sip,
+    financial_goal: financialGoal,
+    target_goal_amount: targetAmount,
+    target_goal_timeline_years: targetTimeline,
     category_spending: categorySpending,
     primary_bank: "Primary Bank Account"
   };
@@ -737,7 +823,7 @@ async function submitOnboardingForm(e) {
     haptics.playPop();
     closeOnboardingModal();
 
-    alert('Wyvern FinTech OS successfully calibrated with your exact financial data!');
+    alert(`Wyvern FinTech OS calibrated! Platform strategy curated for: ${financialGoal}`);
 
     loadOverview();
     loadTransactions();

@@ -1,7 +1,9 @@
 """
-Wyvern Budgeting Recommendation Engine (INR Edition):
-Analyzes user transactions to generate 50/30/20 allocations, recurring subscription audits,
-and personalized financial recommendations in Indian Rupees (₹).
+Wyvern Budgeting Recommendation Engine (Goal-Curated Edition):
+Dynamically curates recommendations, 50/30/20 benchmarks, and financial strategy based on user's goal:
+- GROW_WEALTH: Long-term wealth compounding, step-up SIPs, and index hedges
+- INCREASE_MONEY: High-alpha momentum equities, secondary income velocity, and aggressive capital growth
+- SAVE_MONEY: Aggressive expense trimming, subscription elimination, and 12-month emergency runway
 """
 from typing import Dict, List, Any
 import numpy as np
@@ -10,10 +12,9 @@ class BudgetEngine:
     def __init__(self):
         pass
 
-    def analyze_budget(self, transactions: List[Dict[str, Any]], accounts: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def analyze_budget(self, transactions: List[Dict[str, Any]], accounts: List[Dict[str, Any]], goal: str = "GROW_WEALTH") -> Dict[str, Any]:
         """
-        Calculates 50/30/20 rule allocation, detects spending leaks,
-        and generates actionable personalized financial recommendations in INR (₹).
+        Calculates 50/30/20 allocation and curates recommendations tailored specifically to the user's money goal.
         """
         expense_txs = [t for t in transactions if t.get("category") != "Income & Deposits"]
         income_txs = [t for t in transactions if t.get("category") == "Income & Deposits"]
@@ -50,104 +51,141 @@ class BudgetEngine:
         sub_total_monthly = sum(s["amount"] for s in subs)
         sub_annual_cost = sub_total_monthly * 12
 
+        # Ideal benchmark targets based on user's mission
+        if goal == "SAVE_MONEY":
+            ideal_needs, ideal_wants, ideal_savings = 50, 20, 30
+        elif goal == "INCREASE_MONEY":
+            ideal_needs, ideal_wants, ideal_savings = 45, 25, 30
+        else: # GROW_WEALTH
+            ideal_needs, ideal_wants, ideal_savings = 50, 30, 20
+
+        # Curated recommendations based on money goal
         recommendations = []
 
-        # Rec 1: Wants vs 50/30/20 target
-        if wants_pct > 30:
-            excess_wants = max(0.0, (wants_pct - 30) / 100.0 * total_income)
+        if goal == "SAVE_MONEY":
+            # Mission: Save Money
+            trim_amt = max(3500.0, wants_total * 0.3)
             recommendations.append({
-                "id": "rec_wants_rebalance",
+                "id": "rec_save_discretionary",
                 "priority": "HIGH",
-                "badge": "50/30/20 LEAK",
-                "title": "Discretionary Spending Above 30% Threshold",
-                "description": f"Discretionary spending is currently at {wants_pct}% of total monthly earnings. Trimming ₹{excess_wants:,.0f}/mo from dining and online shopping will align your profile with institutional wealth-building benchmarks.",
-                "monthly_savings_impact": round(excess_wants, 2),
-                "annual_savings_impact": round(excess_wants * 12, 2),
-                "suggested_action": f"Set a ₹{max(3000, excess_wants):,.0f} monthly cap on food delivery apps and impulse shopping."
+                "badge": "GOAL: SAVE MONEY",
+                "title": "Aggressive Discretionary Spending Lockdown",
+                "description": f"To optimize capital preservation, trim discretionary outflows from {wants_pct}% down to {ideal_wants}%. Trimming ₹{trim_amt:,.0f}/month across dining and impulse shopping accelerates liquid reserves.",
+                "monthly_savings_impact": round(trim_amt, 2),
+                "annual_savings_impact": round(trim_amt * 12, 2),
+                "suggested_action": f"Impose a strict weekly discretionary debit ceiling of ₹{round(trim_amt / 4, 0):,}."
             })
-        else:
+
+            sub_cut = sub_total_monthly * 0.6
             recommendations.append({
-                "id": "rec_wants_optimal",
+                "id": "rec_save_subscriptions",
+                "priority": "HIGH",
+                "badge": "SUBSCRIPTION PURGE",
+                "title": "Purge Underutilized Digital Subscriptions",
+                "description": f"You are carrying ₹{sub_total_monthly:,.2f}/mo (₹{sub_annual_cost:,.2f}/year) across recurring streaming and SaaS plans. Pausing non-essential OTT services saves ₹{sub_cut:,.0f}/mo immediately.",
+                "monthly_savings_impact": round(sub_cut, 2),
+                "annual_savings_impact": round(sub_cut * 12, 2),
+                "suggested_action": "Cancel overlapping OTT video and music streaming plans."
+            })
+
+            liquid_cash = sum(a["balance"] for a in accounts if a["subtype"] in ["savings", "checking"])
+            recommendations.append({
+                "id": "rec_save_runway",
                 "priority": "OPTIMIZATION",
-                "badge": "DISCIPLINED ALLOCATION",
-                "title": "Discretionary Spending Under Control",
-                "description": f"Discretionary 'Wants' are kept at {wants_pct}% of total inflow, which is within the 30% healthy threshold.",
+                "badge": "12-MO RUNWAY",
+                "title": "Park Liquid Reserves into 7.1% Arbitrage / Liquid Funds",
+                "description": f"Move idle bank balance (₹{liquid_cash:,.0f}) from low-yield 3% savings into 7.1% tax-efficient Arbitrage funds while securing a 12-month emergency cushion.",
+                "monthly_savings_impact": round((liquid_cash * 0.041) / 12, 2),
+                "annual_savings_impact": round(liquid_cash * 0.041, 2),
+                "suggested_action": "Retain 3 months in checking; sweep surplus to ICICI/Kotak Arbitrage Fund."
+            })
+
+        elif goal == "INCREASE_MONEY":
+            # Mission: Increase Money
+            alpha_alloc = max(5000.0, total_income * 0.08)
+            recommendations.append({
+                "id": "rec_inc_momentum",
+                "priority": "HIGH",
+                "badge": "GOAL: INCREASE MONEY",
+                "title": "Deploy Capital into High-Growth Momentum Equities",
+                "description": f"Route ₹{alpha_alloc:,.0f}/month into market leaders showing dominant relative strength (Trent, Tata Motors, NVIDIA, Broadcom) to maximize capital appreciation.",
+                "monthly_savings_impact": round(alpha_alloc * 0.35, 2),
+                "annual_savings_impact": round(alpha_alloc * 0.35 * 12, 2),
+                "suggested_action": "Set up automated monthly basket buys in top 3 high-beta leaders."
+            })
+
+            inflow_target = total_income * 0.2
+            recommendations.append({
+                "id": "rec_inc_cashflow",
+                "priority": "HIGH",
+                "badge": "INCOME VELOCITY",
+                "title": "Target 20% Velocity Inflow Expansion (₹" + f"{inflow_target:,.0f}" + "/mo)",
+                "description": f"Your current monthly inflow is ₹{total_income:,.0f}. Scaling secondary consulting, freelance, or dividend yield by ₹{inflow_target:,.0f}/mo supercharges your compounding engine.",
+                "monthly_savings_impact": round(inflow_target, 2),
+                "annual_savings_impact": round(inflow_target * 12, 2),
+                "suggested_action": "Deploy specialized skills into high-ticket freelance or performance advisory."
+            })
+
+            recommendations.append({
+                "id": "rec_inc_sectoral",
+                "priority": "OPTIMIZATION",
+                "badge": "THEMATIC ALPHA",
+                "title": "Thematic Allocation: AI Infrastructure & Semiconductor Index",
+                "description": "Channel surplus investment into iShares Semiconductor (SOXX) and ICICI Tech Fund to capture global accelerated computing tailwinds.",
+                "monthly_savings_impact": round(alpha_alloc * 0.25, 2),
+                "annual_savings_impact": round(alpha_alloc * 0.25 * 12, 2),
+                "suggested_action": "Allocate 20% of monthly investment pool to sectoral tech leaders."
+            })
+
+        else:
+            # Mission: Grow Wealth
+            sip_boost = max(4000.0, total_income * 0.06)
+            proj_10y = sip_boost * (( (1 + 0.15/12)**(120) - 1 ) / (0.15/12))
+            recommendations.append({
+                "id": "rec_wealth_compounding",
+                "priority": "HIGH",
+                "badge": "GOAL: GROW WEALTH",
+                "title": "Systematic 15% CAGR Wealth Engine Acceleration",
+                "description": f"Boosting monthly SIP into Parag Parikh Flexi Cap and Quant Small Cap by ₹{sip_boost:,.0f}/mo compounds to ~₹{proj_10y:,.0f} over 10 years at a 15% historical CAGR.",
+                "monthly_savings_impact": round(sip_boost, 2),
+                "annual_savings_impact": round(sip_boost * 12, 2),
+                "suggested_action": "Activate automatic step-up SIP with 10% annual escalation."
+            })
+
+            recommendations.append({
+                "id": "rec_wealth_503020",
+                "priority": "HIGH",
+                "badge": "INSTITUTIONAL BENCHMARK",
+                "title": "Institutional 50/30/20 Asset Alignment",
+                "description": f"Rebalance discretionary spending to anchor 20%+ of your income (₹{total_income * 0.2:,.0f}/mo) directly into wealth-compounding assets.",
                 "monthly_savings_impact": round(total_income * 0.05, 2),
                 "annual_savings_impact": round(total_income * 0.6, 2),
-                "suggested_action": "Maintain this discipline and route surplus cash directly into your active SIP portfolio."
+                "suggested_action": "Automate mutual fund transfers on salary credit day."
             })
 
-        # Rec 2: Subscription Audit & Consolidation
-        if len(subs) >= 2 or sub_total_monthly > 1000:
-            potential_sub_trim = sub_total_monthly * 0.35
             recommendations.append({
-                "id": "rec_sub_audit",
-                "priority": "HIGH",
-                "badge": "SUBSCRIPTION CREEP",
-                "title": f"Consolidate {len(subs)} Active Streaming & Digital Subscriptions",
-                "description": f"You are currently spending ₹{sub_total_monthly:,.2f}/mo (₹{sub_annual_cost:,.2f}/year) across recurring digital licenses. Wyvern detected overlapping OTT streaming platforms.",
-                "monthly_savings_impact": round(potential_sub_trim, 2),
-                "annual_savings_impact": round(potential_sub_trim * 12, 2),
-                "suggested_action": "Pause dormant subscriptions (e.g. duplicate streaming) to save instantly."
-            })
-
-        # Rec 3: High Dining Out Arbitrage
-        if food_dining_total > 5000:
-            dining_trim = food_dining_total * 0.22
-            recommendations.append({
-                "id": "rec_dining_arbitrage",
-                "priority": "MEDIUM",
-                "badge": "DINING OPTIMIZATION",
-                "title": "Delivery & Restaurant Surcharge Arbitrage",
-                "description": f"Food delivery fees and restaurant markups constitute ₹{food_dining_total:,.2f} of this cycle's outflows. Shifting two orders/week to grocery prep yields high compound gains.",
-                "monthly_savings_impact": round(dining_trim, 2),
-                "annual_savings_impact": round(dining_trim * 12, 2),
-                "suggested_action": "Batch grocery orders with Blinkit / Instamart to mitigate delivery charges."
-            })
-
-        # Rec 4: SIP Compound Yield Reinvestment
-        rec_sip_boost = max(2500.0, total_income * 0.05)
-        projected_10y_boost = rec_sip_boost * (( (1 + 0.15/12)**(120) - 1 ) / (0.15/12))
-        recommendations.append({
-            "id": "rec_sip_acceleration",
-            "priority": "OPTIMIZATION",
-            "badge": "ALPHA GENERATION",
-            "title": "Reallocate Surplus into Top-Quartile SIPs (Parag Parikh / Quant)",
-            "description": f"Routing an additional ₹{rec_sip_boost:,.0f}/month into Parag Parikh Flexi Cap or Quant Small Cap compounds to ~₹{projected_10y_boost:,.0f} over 10 years at a 15% historical CAGR.",
-            "monthly_savings_impact": round(rec_sip_boost, 2),
-            "annual_savings_impact": round(rec_sip_boost * 12, 2),
-            "suggested_action": "Set up an automated monthly auto-debit on the 1st of every month."
-        })
-
-        # Rec 5: Emergency Liquidity Cushion
-        liquid_cash = sum(a["balance"] for a in accounts if a["subtype"] in ["savings", "checking"])
-        monthly_burn = total_expense if total_expense > 0 else 40000.0
-        runway_months = round(liquid_cash / monthly_burn, 1) if monthly_burn > 0 else 6.0
-
-        if runway_months > 6:
-            idle_cash = max(0.0, liquid_cash - (monthly_burn * 4))
-            recommendations.append({
-                "id": "rec_yield_boost",
+                "id": "rec_wealth_global_hedge",
                 "priority": "OPTIMIZATION",
-                "badge": "CASH DRAG ALERT",
-                "title": "Optimize Idle Cash in High-Yield Arbitrage or Liquid Funds",
-                "description": f"Your liquid runway is {runway_months} months (₹{liquid_cash:,.2f}). Move ~₹{idle_cash:,.2f} of excess checking balance into 7.1% APY Arbitrage Funds or Liquid Mutual Funds.",
-                "monthly_savings_impact": round((idle_cash * 0.071) / 12, 2),
-                "annual_savings_impact": round(idle_cash * 0.071, 2),
-                "suggested_action": "Maintain 4 months of buffer in savings and deploy remainder to liquid arbitrage."
+                "badge": "GLOBAL CURRENCY HEDGE",
+                "title": "Global Equity Hedge via Vanguard S&P 500 (VOO)",
+                "description": "Diversify 15% of your portfolio into USD-denominated index funds to benefit from currency depreciation and global tech dominance.",
+                "monthly_savings_impact": round(sip_boost * 0.5, 2),
+                "annual_savings_impact": round(sip_boost * 0.5 * 12, 2),
+                "suggested_action": "Set up a recurring monthly Dollar-Cost Average (DCA) into VOO/QQQ."
             })
 
-        total_potential_monthly = sum(r["monthly_savings_impact"] for r in recommendations[:4])
+        total_potential_monthly = sum(r["monthly_savings_impact"] for r in recommendations)
 
         return {
             "currency": "INR",
             "currency_symbol": "₹",
+            "goal": goal,
             "income": round(total_income, 2),
             "expense": round(total_expense, 2),
             "rule_50_30_20": {
-                "needs": {"amount": round(needs_total, 2), "pct": needs_pct, "ideal_pct": 50},
-                "wants": {"amount": round(wants_total, 2), "pct": wants_pct, "ideal_pct": 30},
-                "savings": {"amount": round(savings_total, 2), "pct": savings_pct, "ideal_pct": 20}
+                "needs": {"amount": round(needs_total, 2), "pct": needs_pct, "ideal_pct": ideal_needs},
+                "wants": {"amount": round(wants_total, 2), "pct": wants_pct, "ideal_pct": ideal_wants},
+                "savings": {"amount": round(savings_total, 2), "pct": savings_pct, "ideal_pct": ideal_savings}
             },
             "category_breakdown": [{"category": k, "amount": round(v, 2)} for k, v in sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)],
             "subscriptions": {
