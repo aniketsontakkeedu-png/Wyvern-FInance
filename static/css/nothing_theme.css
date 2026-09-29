@@ -1,0 +1,385 @@
+/* 
+   Wyvern - Nothing OS Inspired Design System
+   Monochromatic, Dot Matrix, Glyph Aesthetics & Stark Contrast
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DotGothic16&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-card: #121212;
+  --bg-card-hover: #181818;
+  --bg-card-elevated: #1e1e1e;
+  
+  --border-subtle: #242424;
+  --border-strong: #383838;
+  --border-focus: #ffffff;
+  
+  --text-primary: #f5f5f5;
+  --text-secondary: #9e9e9e;
+  --text-muted: #5e5e5e;
+  
+  --nothing-red: #D71921;
+  --nothing-red-glow: rgba(215, 25, 33, 0.35);
+  --nothing-red-soft: rgba(215, 25, 33, 0.12);
+  
+  --glyph-white: #ffffff;
+  --glyph-glow: rgba(255, 255, 255, 0.15);
+  
+  --font-main: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --font-ndot: 'DotGothic16', 'DM Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Nothing OS Dot Matrix Text */
+.font-ndot {
+  font-family: var(--font-ndot);
+  letter-spacing: 0.05em;
+}
+
+.font-mono-custom {
+  font-family: var(--font-mono);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Bento Card Styling */
+.bento-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bento-card:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-card-hover);
+}
+
+.bento-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Nothing OS Glyph Accents */
+.glyph-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--nothing-red);
+  box-shadow: 0 0 10px var(--nothing-red-glow);
+  animation: pulse-glyph 2s infinite ease-in-out;
+}
+
+.glyph-indicator-white {
+  background-color: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+@keyframes pulse-glyph {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+/* Nothing OS Button Styles */
+.btn-nothing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.btn-nothing:hover {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
+}
+
+.btn-nothing-red {
+  background: var(--nothing-red);
+  color: #ffffff;
+  border-color: var(--nothing-red);
+}
+
+.btn-nothing-red:hover {
+  background: #ff2a3b;
+  border-color: #ff2a3b;
+  color: #ffffff;
+  box-shadow: 0 0 20px var(--nothing-red-glow);
+}
+
+.btn-nothing-outline {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.btn-nothing-outline:hover {
+  background: var(--bg-card-elevated);
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+/* Pill Tabs */
+.nav-pill {
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-pill:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+.nav-pill.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
+}
+
+/* Dot Matrix Badge */
+.badge-ndot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-family: var(--font-ndot);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+}
+
+.badge-red {
+  background: var(--nothing-red-soft);
+  color: #ff4d5a;
+  border-color: rgba(215, 25, 33, 0.4);
+}
+
+.badge-white {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Table styling */
+.nothing-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+
+.nothing-table th {
+  padding: 12px 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.nothing-table td {
+  padding: 14px 16px;
+  background: var(--bg-card);
+  font-size: 13px;
+  transition: background 0.15s ease;
+}
+
+.nothing-table tr td:first-child {
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
+}
+
+.nothing-table tr td:last-child {
+  border-top-right-radius: 14px;
+  border-bottom-right-radius: 14px;
+}
+
+.nothing-table tr:hover td {
+  background: var(--bg-card-elevated);
+}
+
+/* Custom Input & Form Controls */
+.nothing-input {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 12px 18px;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.nothing-input:focus {
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+}
+
+.nothing-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  outline: none;
+}
+
+.nothing-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  border: 2px solid var(--nothing-red);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  transition: transform 0.1s ease;
+}
+
+.nothing-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Glyph Progress Meter */
+.glyph-meter-container {
+  height: 6px;
+  width: 100%;
+  background: var(--border-subtle);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.glyph-meter-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #ffffff;
+  transition: width 0.4s ease;
+}
+
+.glyph-meter-fill.red {
+  background: var(--nothing-red);
+  box-shadow: 0 0 8px var(--nothing-red-glow);
+}
+
+/* Dot matrix crosshair effect */
+.dot-crosshair {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: var(--font-ndot);
+  font-size: 10px;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+/* Modal Backdrop */
+.nothing-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.nothing-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 28px;
+  max-width: 600px;
+  width: 100%;
+  padding: 32px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 2px rgba(255, 255, 255, 0.3);
+  position: relative;
+  animation: modal-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WYVERN // FINTECH OS</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Nothing OS Custom Styling -->
+  <link rel="stylesheet" href="/static/css/nothing_theme.css">
+</head>
+<body class="bg-black text-[#f5f5f5] selection:bg-[#D71921] selection:text-white">
+
+  <!-- Top Ambient Glow & Glyph Strip -->
+  <div class="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#D71921] to-transparent z-50 opacity-80"></div>
+
+  <!-- Header Section -->
+  <header class="border-b border-[#222222] bg-[#050505]/90 backdrop-blur-md sticky top-0 z-40 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      
+      <!-- Brand & Status -->
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-[#D71921] shadow-[0_0_12px_#D71921]"></div>
+          <span class="font-ndot text-2xl tracking-widest text-white font-bold">WYVERN</span>
+          <span class="font-mono text-[10px] text-[#777] border border-[#262626] px-2 py-0.5 rounded-full">OS 2.6</span>
+        </div>
+        <div class="hidden sm:flex items-center gap-2 font-mono text-xs text-[#888] border-l border-[#262626] pl-4">
+          <span class="glyph-indicator"></span>
+          <span id="header-plaid-status" class="uppercase">PLAID SANDBOX // SYNCED</span>
+        </div>
+      </div>
+
+      <!-- Live Clock & Quick Actions -->
+      <div class="flex items-center flex-wrap gap-3">
+        <div id="live-clock" class="font-mono text-xs px-3 py-1.5 rounded-full bg-[#121212] border border-[#262626]">
+          --:--:--
+        </div>
+
+        <button id="btn-currency-toggle" onclick="toggleCurrency()" class="btn-nothing text-xs py-1.5 px-3">
+          $ USD
+        </button>
+
+        <button id="btn-audio-toggle" onclick="toggleAudio()" class="btn-nothing text-xs py-1.5 px-3 text-white">
+          AUDIO: ON
+        </button>
+
+        <button onclick="openPlaidModal()" class="btn-nothing btn-nothing-red text-xs py-1.5 px-4">
+          CONNECT PLAID
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Navigation Pills Bar (Nothing OS Widgets Switcher) -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#1c1c1c] no-scrollbar">
+      <button data-tab="overview" onclick="switchTab('overview')" class="nav-pill active">
+        (01) OVERVIEW
+      </button>
+      <button data-tab="ml" onclick="switchTab('ml')" class="nav-pill">
+        (02) ML INTELLIGENCE
+      </button>
+      <button data-tab="transactions" onclick="switchTab('transactions')" class="nav-pill">
+        (03) TRANSACTIONS & PLAID
+      </button>
+      <button data-tab="market" onclick="switchTab('market')" class="nav-pill">
+        (04) STOCK LIVE FEED
+      </button>
+      <button data-tab="investments" onclick="switchTab('investments')" class="nav-pill">
+        (05) SIPS & STOCKS (IN/GL)
+      </button>
+      <button data-tab="budget" onclick="switchTab('budget')" class="nav-pill">
+        (06) BUDGET ENGINE
+      </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: OVERVIEW DASHBOARD                  -->
+    <!-- ========================================== -->
+    <div id="tab-overview" class="tab-view space-y-6">
+      
+      <!-- Top Metrics Bento Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Net Worth Card -->
+        <div class="bento-card relative">
+          <div class="dot-crosshair">NW-01</div>
+          <span class="text-xs font-mono text-[#888] uppercase tracking-wider block mb-1">Total Net Worth</span>
+          <div id="stat-net-worth" class="font-ndot text-3xl font-bold text-white mb-2">$0.00</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-[#777]">
+            <span>Assets: $152,151</span>
+            <span class="text-[#ff4d5a]">Debt: -$1,642</span>
+          </div>
+        </div>
+
+        <!-- Monthly Spend Card -->
+        <div class="bento-card relative">
+          <div class="dot-crosshair">SP-02</div>
+          <span class="text-xs font-mono text-[#888] uppercase tracking-wider block mb-1">Cycle Outflows</span>
+          <div id="stat-monthly-spend" class="font-ndot text-3xl font-bold text-white mb-2">$0.00</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-[#777]">
+            <span>Velocity: Normal</span>
+            <span class="text-[#888]">Limit: $5,000</span>
+          </div>
+        </div>
+
+        <!-- Forecasted Savings Card -->
+        <div class="bento-card relative">
+          <div class="dot-crosshair">ML-03</div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-mono text-[#888] uppercase tracking-wider">ML Projected Savings</span>
+            <span id="stat-savings-rate" class="text-xs font-mono text-[#4ade80] font-bold">45.0%</span>
+          </div>
+          <div id="stat-savings-forecast" class="font-ndot text-3xl font-bold text-[#4ade80] mb-2">$0.00/mo</div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-[#777]">
+            <span>Runway: <strong id="stat-runway" class="text-white">7.8 MO</strong></span>
+            <span class="text-[#888]">Confidence: 91%</span>
+          </div>
+        </div>
+
+        <!-- Anomaly Flag Card -->
+        <div class="bento-card relative">
+          <div class="dot-crosshair">AN-04</div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-mono text-[#888] uppercase tracking-wider">Security & Anomaly</span>
+            <span class="glyph-indicator"></span>
+          </div>
+          <div class="my-2">
+            <span id="stat-anomaly-count" class="badge-ndot badge-red text-xs">3 ANOMALIES DETECTED</span>
+          </div>
+          <div class="flex items-center justify-between text-[11px] font-mono text-[#777] mt-3">
+            <span>Isolation Forest: Active</span>
+            <button onclick="switchTab('ml')" class="text-white underline hover:text-[#D71921]">Audit</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Mid Section: Forecast Chart & 50/30/20 Bento -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- ML Savings Forecast Curve (2 cols) -->
+        <div class="bento-card lg:col-span-2 flex flex-col justify-between">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="glyph-indicator"></span>
+                <h3 class="font-ndot text-lg text-white font-bold tracking-wide">ML MONTHLY SAVINGS FORECAST</h3>
+              </div>
+              <p class="text-xs font-mono text-[#888]">Linear & Polynomial Ridge Regression with 80% Confidence Interval</p>
+            </div>
+            <button onclick="switchTab('ml')" class="btn-nothing text-xs py-1 px-3 self-start sm:self-auto">
+              FULL SIMULATOR →
+            </button>
+          </div>
+          
+          <div class="h-64 w-full">
+            <canvas id="overviewForecastChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 50/30/20 Allocation Meter (1 col) -->
+        <div class="bento-card flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-ndot text-base text-white font-bold tracking-wide">50/30/20 HEALTH</h3>
+              <span class="badge-ndot badge-white text-[10px]">WYVERN BENCHMARK</span>
+            </div>
+            <p class="text-xs text-[#888] mb-5 leading-relaxed">
+              Automated allocation breakdown against institutional wealth-building ratios.
+            </p>
+
+            <!-- Needs Bar -->
+            <div class="mb-4">
+              <div class="flex items-center justify-between text-xs font-mono mb-1">
+                <span class="text-[#bbb]">Needs (Ideal: 50%)</span>
+                <span id="val-needs" class="text-white font-bold">48%</span>
+              </div>
+              <div class="glyph-meter-container">
+                <div id="bar-needs" class="glyph-meter-fill" style="width: 48%;"></div>
+              </div>
+            </div>
+
+            <!-- Wants Bar -->
+            <div class="mb-4">
+              <div class="flex items-center justify-between text-xs font-mono mb-1">
+                <span class="text-[#bbb]">Wants (Ideal: 30%)</span>
+                <span id="val-wants" class="text-[#ff4d5a] font-bold">36%</span>
+              </div>
+              <div class="glyph-meter-container">
+                <div id="bar-wants" class="glyph-meter-fill red" style="width: 36%;"></div>
+              </div>
+            </div>
+
+            <!-- Savings Bar -->
+            <div class="mb-4">
+              <div class="flex items-center justify-between text-xs font-mono mb-1">
+                <span class="text-[#bbb]">Savings (Ideal: 20%)</span>
+                <span id="val-savings" class="text-[#4ade80] font-bold">16%</span>
+              </div>
+              <div class="glyph-meter-container">
+                <div id="bar-savings" class="glyph-meter-fill" style="width: 16%; background: #4ade80;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-[#222] text-xs font-mono text-[#888] flex items-center justify-between">
+            <span>Potential Lift: <strong class="text-white">+14%</strong></span>
+            <button onclick="switchTab('budget')" class="underline hover:text-white">Rebalance</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Overview: High-Impact AI Recommendations -->
+      <div class="bento-card">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h3 class="font-ndot text-base text-white font-bold tracking-wide">PERSONALIZED BUDGETING RECOMMENDATIONS</h3>
+          </div>
+          <span class="text-xs font-mono text-[#888]">POWERED BY WYVERN ML ENGINE</span>
+        </div>
+        
+        <div id="overview-recommendations" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: ML INTELLIGENCE & FORECASTING       -->
+    <!-- ========================================== -->
+    <div id="tab-ml" class="tab-view hidden space-y-6">
+      
+      <!-- Interactive ML Categorizer Playground -->
+      <div class="bento-card">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h3 class="font-ndot text-lg text-white font-bold tracking-wide">ML SPENDING CATEGORIZATION ENGINE</h3>
+          </div>
+          <span class="badge-ndot badge-white text-[10px]">TF-IDF + CALIBRATED LOGISTIC REGRESSION</span>
+        </div>
+        <p class="text-xs text-[#888] mb-4">
+          Type any transaction narrative or merchant description to test real-time classification, probability distribution, and confidence scores.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input id="ml-test-input" type="text" placeholder="e.g. Starbucks cold brew, Swiggy Gurgaon, Vanguard VOO, ConEdison utility..." class="nothing-input flex-1" value="Swiggy food order Koramangala">
+          <button onclick="testCategorize()" class="btn-nothing btn-nothing-red flex-shrink-0">
+            PREDICT CATEGORY
+          </button>
+        </div>
+
+        <!-- Quick pill test queries -->
+        <div class="flex flex-wrap gap-2 mt-3 text-xs font-mono text-[#777]">
+          <span>Quick Test:</span>
+          <button onclick="testCategorize('Netflix 4K Premium Plan')" class="hover:text-white underline">Netflix 4K</button>
+          <span>•</span>
+          <button onclick="testCategorize('Zerodha Broking SIP mutual fund')" class="hover:text-white underline">Zerodha SIP</button>
+          <span>•</span>
+          <button onclick="testCategorize('Uber Trip Downtown NYC')" class="hover:text-white underline">Uber Trip</button>
+          <span>•</span>
+          <button onclick="testCategorize('ConEdison Electric NYC')" class="hover:text-white underline">ConEdison Bill</button>
+          <span>•</span>
+          <button onclick="testCategorize('Nike Flagship Store Soho')" class="hover:text-white underline">Nike Store</button>
+          <span>•</span>
+          <button onclick="testCategorize('Direct Deposit Salary Tech Corp')" class="hover:text-white underline">Salary Deposit</button>
+        </div>
+
+        <div id="ml-test-result"></div>
+      </div>
+
+      <!-- ML Anomaly Detection Radar -->
+      <div class="bento-card">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h3 class="font-ndot text-lg text-white font-bold tracking-wide">SPENDING ANOMALY DETECTION RADAR</h3>
+          </div>
+          <span class="badge-ndot badge-red text-[10px]">ISOLATION FOREST & MODIFIED Z-SCORE</span>
+        </div>
+        <p class="text-xs text-[#888] mb-4">
+          Wyvern scans amount distribution outliers, rapid duplicate triggers (<10 mins), and unexpected category spikes against your historical spending median.
+        </p>
+
+        <div id="ml-anomalies-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- 6-Month Savings Forecasting Simulator -->
+      <div class="bento-card">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="glyph-indicator"></span>
+              <h3 class="font-ndot text-lg text-white font-bold tracking-wide">SAVINGS FORECAST SCENARIO SIMULATOR</h3>
+            </div>
+            <p class="text-xs text-[#888]">Simulating 6-Month Wealth Accumulation Across Multi-Variable Trajectories</p>
+          </div>
+        </div>
+
+        <!-- 3 Scenarios Bento Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          
+          <div class="p-4 rounded-2xl bg-[#0f0f0f] border border-[#222]">
+            <span class="text-[10px] font-mono text-[#888] uppercase block mb-1">Conservative (-18%)</span>
+            <div id="sc-conservative-total" class="font-ndot text-2xl font-bold text-white mb-1">$0.00</div>
+            <div class="text-xs font-mono text-[#777]" id="sc-conservative-avg">$0/mo</div>
+            <div class="text-[11px] text-[#888] mt-2">Accounts for emergency repairs, price surges, and unplanned travel.</div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-[#141414] border border-[#333]">
+            <span class="text-[10px] font-mono text-[#aaa] uppercase block mb-1">Baseline Trajectory</span>
+            <div id="sc-baseline-total" class="font-ndot text-2xl font-bold text-white mb-1">$0.00</div>
+            <div class="text-xs font-mono text-[#777]" id="sc-baseline-avg">$0/mo</div>
+            <div class="text-[11px] text-[#888] mt-2">Current momentum with fixed living costs and recurring subscriptions.</div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-[#191919] border border-[#D71921] relative overflow-hidden">
+            <span class="text-[10px] font-mono text-[#ff4d5a] uppercase font-bold block mb-1">Wyvern Optimized (+24%)</span>
+            <div id="sc-optimized-total" class="font-ndot text-2xl font-bold text-[#4ade80] mb-1">$0.00</div>
+            <div class="text-xs font-mono text-[#777]" id="sc-optimized-avg">$0/mo</div>
+            <div class="text-[11px] text-[#ddd] mt-2">
+              Extra accumulated: <strong id="sc-optimized-extra" class="text-[#4ade80]">+$0.00</strong> via AI subscription trim and dining budget rebalancing.
+            </div>
+          </div>
+
+        </div>
+
+        <div class="h-64 w-full mb-6">
+          <canvas id="mlDetailedForecastChart"></canvas>
+        </div>
+
+        <!-- Detailed Projections Table -->
+        <div class="overflow-x-auto">
+          <table class="nothing-table">
+            <thead>
+              <tr>
+                <th>Target Month</th>
+                <th class="text-right">Projected Savings</th>
+                <th class="text-right">Confidence Range (p10 - p90)</th>
+                <th class="text-right">Savings Rate</th>
+                <th class="text-right">Cumulative Corpus</th>
+              </tr>
+            </thead>
+            <tbody id="ml-forecast-tbody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: TRANSACTIONS & PLAID INTEGRATION   -->
+    <!-- ========================================== -->
+    <div id="tab-transactions" class="tab-view hidden space-y-6">
+      
+      <!-- Plaid Integration Widget -->
+      <div class="bento-card flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="glyph-indicator"></span>
+            <h3 class="font-ndot text-base text-white font-bold">PLAID API REAL-TIME PIPELINE</h3>
+            <span class="badge-ndot badge-white text-[10px]">SECURE OAUTH</span>
+          </div>
+          <p class="text-xs text-[#888]">
+            Connected to Sandbox & Production FinTech endpoints. Real-time balance polling, categorized transaction webhooks, and identity verification.
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btn-sync-plaid" onclick="syncPlaidNow()" class="btn-nothing text-xs py-2 px-4">
+            SYNC PLAID API
+          </button>
+          <button onclick="openAddTxModal()" class="btn-nothing btn-nothing-red text-xs py-2 px-4">
+            + ADD TRANSACTION
+          </button>
+        </div>
+      </div>
+
+      <!-- Transactions Ledger Table -->
+      <div class="bento-card">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-ndot text-base text-white font-bold">TRANSACTION LEDGER & ML ANNOTATIONS</h3>
+          <span class="text-xs font-mono text-[#777]">SHOWING RECENT 50 SETTLED ENTRIES</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="nothing-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Merchant & Details</th>
+                <th>ML Category</th>
+                <th class="text-right">Amount</th>
+                <th class="text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-tbody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 4: STOCK MARKET LIVE FEED              -->
+    <!-- ========================================== -->
+    <div id="tab-market" class="tab-view hidden space-y-6">
+      
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h3 class="font-ndot text-xl text-white font-bold tracking-wide">STOCK MARKET LIVE TICKER & INDICES</h3>
+          </div>
+          <p class="text-xs font-mono text-[#888]">Real-time quotes powered by institutional market feeds</p>
+        </div>
+        <button onclick="loadMarketIndices()" class="btn-nothing text-xs py-1.5 px-3">
+          ↻ REFRESH QUOTES
+        </button>
+      </div>
+
+      <!-- Live Indices Grid -->
+      <div id="market-indices-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Market Insights Card -->
+      <div class="bento-card">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-ndot text-base text-white font-bold">MARKET SENTIMENT & VOLATILITY MATRIX</h4>
+          <span class="badge-ndot badge-white text-[10px]">MACRO INTELLIGENCE</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+          <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222]">
+            <div class="text-[#777] mb-1">INDIA DOMESTIC MACRO</div>
+            <div class="text-white font-bold text-sm mb-1">NIFTY 50: BULLISH MOMENTUM</div>
+            <p class="text-[#888] text-[11px] leading-relaxed">
+              Capex cycle and retail SIP inflows driving steady structural support above 22,500 levels.
+            </p>
+          </div>
+          <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222]">
+            <div class="text-[#777] mb-1">US TECH & AI MEGACAPS</div>
+            <div class="text-white font-bold text-sm mb-1">NASDAQ: ACCELERATED EARNINGS</div>
+            <p class="text-[#888] text-[11px] leading-relaxed">
+              Hyperscalers sustaining record AI infrastructure capex; semiconductor multiples supported.
+            </p>
+          </div>
+          <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222]">
+            <div class="text-[#777] mb-1">INTEREST RATE CYCLE</div>
+            <div class="text-white font-bold text-sm mb-1">GLOBAL POLICY EASING</div>
+            <p class="text-[#888] text-[11px] leading-relaxed">
+              Central bank rate cuts providing favorable tailwinds for growth equities and equity mutual funds.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 5: SIPS & STOCKS (INDIA vs GLOBAL)    -->
+    <!-- ========================================== -->
+    <div id="tab-investments" class="tab-view hidden space-y-6">
+      
+      <!-- Region Selector Switch -->
+      <div class="bento-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h3 class="font-ndot text-xl text-white font-bold tracking-wide">INVESTMENT INTELLIGENCE & SIPS</h3>
+          </div>
+          <p class="text-xs text-[#888]">Curated top-quartile systematic plans and highest-conviction equity leaders</p>
+        </div>
+
+        <div class="flex items-center gap-2 p-1 rounded-full bg-[#0a0a0a] border border-[#2a2a2a]">
+          <button id="btn-region-india" onclick="STATE.investmentRegion='india'; renderInvestmentsUI();" class="nav-pill active">
+            🇮🇳 INDIA SPECIFIC
+          </button>
+          <button id="btn-region-global" onclick="STATE.investmentRegion='global'; renderInvestmentsUI();" class="nav-pill">
+            🌐 GLOBAL SPECIFIC
+          </button>
+        </div>
+      </div>
+
+      <!-- Top SIPs Section -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator glyph-indicator-white"></span>
+            <h4 class="font-ndot text-base text-white font-bold tracking-wider">TOP PERFORMING SIPS / MUTUAL FUNDS</h4>
+          </div>
+          <span class="text-xs font-mono text-[#777]">SORTED BY 5-YEAR COMPOUND ANNUAL GROWTH</span>
+        </div>
+
+        <div id="sips-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Top Stocks Section -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h4 class="font-ndot text-base text-white font-bold tracking-wider">TOP PERFORMING EQUITY LEADERS</h4>
+          </div>
+          <span class="text-xs font-mono text-[#777]">LIVE PRICE QUOTES & TARGET VALUATIONS</span>
+        </div>
+
+        <div id="stocks-cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Interactive SIP Compound Growth Calculator -->
+      <div id="sip-calculator-section" class="bento-card">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h3 id="sip-calc-title" class="font-ndot text-lg text-white font-bold tracking-wide">INTERACTIVE SIP COMPOUND GROWTH CALCULATOR</h3>
+          </div>
+          <span class="badge-ndot badge-red text-[10px]">MONTHLY COMPOUNDING</span>
+        </div>
+        <p class="text-xs text-[#888] mb-6">
+          Calculate the exponential impact of disciplined systematic investing with optional annual step-up.
+        </p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Controls (1 col) -->
+          <div class="space-y-4">
+            
+            <div>
+              <div class="flex items-center justify-between text-xs font-mono mb-2">
+                <span class="text-[#bbb]">Monthly SIP Outlay</span>
+                <span id="sip-monthly-val" class="text-white font-bold">$10,000</span>
+              </div>
+              <input id="sip-input-monthly" type="range" min="500" max="100000" step="500" value="10000" class="nothing-slider">
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-xs font-mono mb-2">
+                <span class="text-[#bbb]">Expected Annual Return (CAGR)</span>
+                <span id="sip-rate-val" class="text-[#4ade80] font-bold">15%</span>
+              </div>
+              <input id="sip-input-rate" type="range" min="6" max="35" step="0.5" value="15" class="nothing-slider">
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-xs font-mono mb-2">
+                <span class="text-[#bbb]">Investment Tenure</span>
+                <span id="sip-years-val" class="text-white font-bold">10 Years</span>
+              </div>
+              <input id="sip-input-years" type="range" min="1" max="30" step="1" value="10" class="nothing-slider">
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-xs font-mono mb-2">
+                <span class="text-[#bbb]">Annual Step-Up (% Increase / Yr)</span>
+                <span id="sip-stepup-val" class="text-[#ff4d5a] font-bold">10% / yr</span>
+              </div>
+              <input id="sip-input-stepup" type="range" min="0" max="25" step="1" value="10" class="nothing-slider">
+            </div>
+
+            <div class="pt-2">
+              <button onclick="calculateSIP()" class="btn-nothing btn-nothing-red w-full text-xs py-2.5">
+                RECALCULATE CORPUS
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Output Metrics & Chart (2 cols) -->
+          <div class="lg:col-span-2 flex flex-col justify-between">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222]">
+                <span class="text-[10px] font-mono text-[#777] uppercase block mb-1">Total Invested</span>
+                <div id="sip-out-invested" class="font-mono text-base font-bold text-white">$0.00</div>
+              </div>
+              <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222]">
+                <span class="text-[10px] font-mono text-[#777] uppercase block mb-1">Wealth Gained</span>
+                <div id="sip-out-returns" class="font-mono text-base font-bold text-[#4ade80]">$0.00</div>
+              </div>
+              <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222]">
+                <span class="text-[10px] font-mono text-[#777] uppercase block mb-1">Maturity Corpus</span>
+                <div id="sip-out-total" class="font-mono text-base font-bold text-[#ff4d5a]">$0.00</div>
+              </div>
+              <div class="p-3 rounded-xl bg-[#0c0c0c] border border-[#222]">
+                <span class="text-[10px] font-mono text-[#777] uppercase block mb-1">Multiplier</span>
+                <div id="sip-out-multiplier" class="font-mono text-base font-bold text-white">2.8x Growth</div>
+              </div>
+            </div>
+
+            <div class="h-56 w-full">
+              <canvas id="sipGrowthCanvas"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 6: BUDGET ENGINE & RECOMMENDATIONS    -->
+    <!-- ========================================== -->
+    <div id="tab-budget" class="tab-view hidden space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Category Breakdown Chart (1 col) -->
+        <div class="bento-card">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-ndot text-base text-white font-bold">SPENDING RADAR</h3>
+            <span class="badge-ndot badge-white text-[10px]">CYCLE BREAKDOWN</span>
+          </div>
+          <div class="h-64 w-full">
+            <canvas id="budgetCategoryChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Subscription Creep Auditor (2 cols) -->
+        <div class="bento-card lg:col-span-2">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="glyph-indicator"></span>
+              <h3 class="font-ndot text-base text-white font-bold">SUBSCRIPTION CREEP AUDITOR</h3>
+            </div>
+            <span class="badge-ndot badge-red text-[10px]"><span id="sub-count">4</span> ACTIVE SERVICES</span>
+          </div>
+          
+          <div class="flex items-center gap-6 mb-4 text-xs font-mono text-[#888]">
+            <div>Monthly Burn: <strong id="sub-monthly-total" class="text-white">$0.00</strong></div>
+            <div>Annual Drag: <strong id="sub-annual-total" class="text-[#ff4d5a]">$0.00</strong></div>
+          </div>
+
+          <div id="subscriptions-list" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Full Actionable Recommendations -->
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <span class="glyph-indicator"></span>
+            <h3 class="font-ndot text-lg text-white font-bold tracking-wide">ALL PERSONALIZED RECOMMENDATIONS</h3>
+          </div>
+          <span class="text-xs font-mono text-[#777]">RANKED BY FINANCIAL ROI</span>
+        </div>
+
+        <div id="budget-full-recommendations" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: PLAID LINK SIMULATOR                -->
+  <!-- ========================================== -->
+  <div id="plaid-modal" class="nothing-modal-backdrop hidden">
+    <div class="nothing-modal">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="glyph-indicator"></span>
+          <h3 class="font-ndot text-lg text-white font-bold">PLAID LINK // INSTANT CONNECT</h3>
+        </div>
+        <button onclick="closePlaidModal()" class="text-[#777] hover:text-white font-mono text-sm">✕</button>
+      </div>
+      <p class="text-xs text-[#888] mb-4">
+        Select an institution to simulate secure Plaid OAuth credential verification, item token exchange, and account synchronization.
+      </p>
+
+      <div id="plaid-connection-status" class="mb-4"></div>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <button onclick="connectPlaidBank('JPMorgan Chase & Co.')" class="p-3 rounded-2xl bg-[#0f0f0f] border border-[#222] hover:border-white text-left transition-all">
+          <div class="text-xs font-bold text-white font-mono mb-1">CHASE</div>
+          <div class="text-[10px] text-[#777] font-mono">JPMorgan Chase & Co.</div>
+        </button>
+        <button onclick="connectPlaidBank('Bank of America')" class="p-3 rounded-2xl bg-[#0f0f0f] border border-[#222] hover:border-white text-left transition-all">
+          <div class="text-xs font-bold text-white font-mono mb-1">BOA</div>
+          <div class="text-[10px] text-[#777] font-mono">Bank of America</div>
+        </button>
+        <button onclick="connectPlaidBank('HDFC Bank Ltd (India)')" class="p-3 rounded-2xl bg-[#0f0f0f] border border-[#222] hover:border-white text-left transition-all">
+          <div class="text-xs font-bold text-white font-mono mb-1">HDFC BANK</div>
+          <div class="text-[10px] text-[#777] font-mono">India Premier Banking</div>
+        </button>
+        <button onclick="connectPlaidBank('ICICI Bank Ltd (India)')" class="p-3 rounded-2xl bg-[#0f0f0f] border border-[#222] hover:border-white text-left transition-all">
+          <div class="text-xs font-bold text-white font-mono mb-1">ICICI BANK</div>
+          <div class="text-[10px] text-[#777] font-mono">Digital Banking India</div>
+        </button>
+        <button onclick="connectPlaidBank('Wells Fargo')" class="p-3 rounded-2xl bg-[#0f0f0f] border border-[#222] hover:border-white text-left transition-all">
+          <div class="text-xs font-bold text-white font-mono mb-1">WELLS FARGO</div>
+          <div class="text-[10px] text-[#777] font-mono">Commercial & Retail</div>
+        </button>
+        <button onclick="connectPlaidBank('Silicon Valley Bank')" class="p-3 rounded-2xl bg-[#0f0f0f] border border-[#222] hover:border-white text-left transition-all">
+          <div class="text-xs font-bold text-white font-mono mb-1">SVB</div>
+          <div class="text-[10px] text-[#777] font-mono">Tech & Venture Banking</div>
+        </button>
+      </div>
+
+      <div class="flex justify-end">
+        <button onclick="closePlaidModal()" class="btn-nothing text-xs py-2 px-4">
+          CLOSE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: ADD TRANSACTION                     -->
+  <!-- ========================================== -->
+  <div id="add-tx-modal" class="nothing-modal-backdrop hidden">
+    <div class="nothing-modal">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="glyph-indicator"></span>
+          <h3 class="font-ndot text-lg text-white font-bold">NEW TRANSACTION // ML INGESTION</h3>
+        </div>
+        <button onclick="closeAddTxModal()" class="text-[#777] hover:text-white font-mono text-sm">✕</button>
+      </div>
+      <p class="text-xs text-[#888] mb-4">
+        Transaction will be automatically processed through Wyvern's ML categorizer and checked for anomaly deviation.
+      </p>
+
+      <form onsubmit="submitNewTransaction(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-mono text-[#aaa] mb-1">Merchant / Narrative</label>
+          <input id="tx-input-merchant" type="text" required placeholder="e.g. Zomato Gurgaon, Whole Foods Market, Apple Store" class="nothing-input">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-[#aaa] mb-1">Amount ($ / ₹)</label>
+          <input id="tx-input-amount" type="number" step="0.01" required placeholder="0.00" class="nothing-input">
+        </div>
+
+        <div>
+          <label class="block text-xs font-mono text-[#aaa] mb-1">Category (Leave empty for ML Auto-Predict)</label>
+          <select id="tx-input-category" class="nothing-input">
+            <option value="">-- Let Wyvern ML Auto-Categorize --</option>
+            <option value="Food & Dining">Food & Dining</option>
+            <option value="Shopping & Retail">Shopping & Retail</option>
+            <option value="Transportation">Transportation</option>
+            <option value="Subscriptions & Digital">Subscriptions & Digital</option>
+            <option value="Bills & Utilities">Bills & Utilities</option>
+            <option value="Health & Fitness">Health & Fitness</option>
+            <option value="Investments & Savings">Investments & Savings</option>
+            <option value="Entertainment & Leisure">Entertainment & Leisure</option>
+            <option value="Income & Deposits">Income & Deposits</option>
+            <option value="Travel & Lodging">Travel & Lodging</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" onclick="closeAddTxModal()" class="btn-nothing text-xs py-2 px-4">
+            CANCEL
+          </button>
+          <button type="submit" class="btn-nothing btn-nothing-red text-xs py-2 px-5">
+            INGEST & ANALYZE
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/js/haptics.js"></script>
+  <script src="/static/js/charts.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
